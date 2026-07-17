@@ -1,18 +1,135 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { contentPages, type ContentPage } from "../../lib/content-pages";
+import { Footer } from "../components/Footer";
 import { Header } from "../components/Header";
 
-const pages: Record<string, { label: string; title: string; intro: string; sections: { title: string; body: string }[] }> = {
-  "about": { label: "About Fikra in Action", title: "Practical technology. Clear recommendations.", intro: "Fikra in Action helps people discover, understand, and compare useful tools without exaggerated claims or unnecessary complexity.", sections: [{ title: "Our purpose", body: "We turn product information into practical guidance: who a tool is for, what it does well, where it falls short, and what to check before buying." }, { title: "How we work", body: "Our content combines structured research, hands-on evaluation where available, transparent sourcing, and human editorial review." }] },
-  "affiliate-disclosure": { label: "Transparency", title: "Affiliate disclosure", intro: "Some links on Fikra in Action are affiliate links. We may receive a commission when a visitor purchases or registers through them.", sections: [{ title: "No additional cost", body: "Affiliate commissions do not increase the price paid by the visitor." }, { title: "Editorial independence", body: "Commercial relationships do not determine our ratings, conclusions, stated limitations, or recommendations." }, { title: "Clear identification", body: "Pages containing affiliate links include a disclosure near the beginning and appropriate sponsored link attributes." }] },
-  "editorial-policy": { label: "Editorial standards", title: "Useful, balanced, and accountable content", intro: "Our editorial process is designed to help readers make decisions—not simply encourage clicks.", sections: [{ title: "Accuracy", body: "We distinguish verified information from claims that require confirmation and state when pricing or availability may change." }, { title: "Balance", body: "Reviews explain both advantages and limitations, including who may be better served by an alternative." }, { title: "Corrections", body: "Material errors are corrected promptly, and pages include updated and verified dates where appropriate." }] },
-  "review-methodology": { label: "How we evaluate", title: "A practical review methodology", intro: "We focus on the factors that determine whether a tool will be useful after the demonstration ends.", sections: [{ title: "Evaluation criteria", body: "Usability, workflow fit, feature quality, pricing clarity, support, integrations, limitations, and overall value." }, { title: "Ratings", body: "Editor ratings reflect the complete experience and are never created from unverified customer review data." }, { title: "Ongoing review", body: "Products change. Important pages are reviewed on a schedule and marked when information may be outdated." }] },
-  "privacy": { label: "Legal", title: "Privacy policy", intro: "We collect only the information needed to operate, improve, and understand the website.", sections: [{ title: "Information collected", body: "This may include contact details you submit, basic analytics, and affiliate click information." }, { title: "Your choices", body: "Non-essential analytics and marketing technologies are controlled through consent settings where required." }] },
-  "terms": { label: "Legal", title: "Terms and conditions", intro: "The website provides general informational content and does not guarantee that a product will meet every reader’s needs.", sections: [{ title: "Use of content", body: "Content may be used for personal evaluation. Republishing substantial portions requires permission." }, { title: "Third-party services", body: "Product availability, pricing, terms, and performance are controlled by their respective providers." }] },
-  "cookies": { label: "Legal", title: "Cookie policy", intro: "Essential cookies support the website. Optional analytics or marketing technologies should only activate according to applicable consent requirements.", sections: [{ title: "Cookie categories", body: "Essential, analytics, marketing, and personalization technologies may be configured separately." }] },
-  "contact": { label: "Get in touch", title: "Contact Fikra in Action", intro: "Send a correction, suggest a tool, or ask about editorial and commercial opportunities.", sections: [{ title: "Email", body: "hello@fikrainaction.com" }, { title: "Corrections", body: "Please include the page link, the information you believe is incorrect, and a reliable source where possible." }] },
-  "tutorials": { label: "Learn by doing", title: "Step-by-step tutorials", intro: "Practical walkthroughs that move from setup to a useful result.", sections: [{ title: "Tutorial library coming next", body: "The publishing system is ready for structured tutorials with requirements, numbered steps, screenshots, tips, and troubleshooting." }] },
-  "deals": { label: "Verified offers", title: "Deals worth checking", intro: "Current promotions and trial offers, with clear eligibility, expiry, and redemption information.", sections: [{ title: "No unverified offers", body: "We only publish deal terms after they have been confirmed. New verified offers will appear here." }] },
+const fallbackPages: Record<string, ContentPage> = {
+  tutorials: {
+    label: "Learn by doing",
+    title: "Step-by-step tutorials.",
+    description: "Practical technology tutorials from Fikra in Action.",
+    intro: "Practical walkthroughs that move from setup to a useful result.",
+    updated: "17 July 2026",
+    sections: [{
+      title: "Tutorial library coming next",
+      paragraphs: ["The publishing system is ready for structured tutorials with requirements, numbered steps, screenshots, tips, and troubleshooting."],
+    }],
+  },
+  deals: {
+    label: "Verified offers",
+    title: "Deals worth checking.",
+    description: "Verified technology offers and trials from Fikra in Action.",
+    intro: "Current promotions and trial offers, with clear eligibility, expiry, and redemption information.",
+    updated: "17 July 2026",
+    sections: [{
+      title: "No unverified offers",
+      paragraphs: ["We only publish deal terms after they have been confirmed. New verified offers will appear here."],
+    }],
+  },
 };
 
-export default async function StaticPage({ params }: { params: Promise<{ slug: string }> }) { const { slug } = await params; const page = pages[slug]; if (!page) notFound(); return <main><Header /><article><section className="article-hero"><div className="container narrow"><p className="micro-label">{page.label}</p><h1>{page.title}</h1><p>{page.intro}</p></div></section><div className="container article-body narrow">{page.sections.map((section) => <section key={section.title}><h2>{section.title}</h2><p>{section.body}</p></section>)}<div className="article-end"><strong>Explore Fikra in Action</strong><Link href="/tools">Browse practical tools →</Link></div></div></article></main>; }
+const pages = { ...contentPages, ...fallbackPages };
+
+function sectionId(title: string) {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+export function generateStaticParams() {
+  return Object.keys(pages).map((slug) => ({ slug }));
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const page = pages[slug];
+  if (!page) return {};
+
+  return {
+    title: page.title.replace(/[.]$/, ""),
+    description: page.description,
+    alternates: { canonical: `/${slug === "terms-of-service" ? "terms" : slug}` },
+    openGraph: {
+      title: page.title,
+      description: page.description,
+      type: "article",
+    },
+  };
+}
+
+export default async function StaticPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const page = pages[slug];
+  if (!page) notFound();
+
+  return (
+    <main>
+      <Header />
+      <article className="policy-page">
+        <header className="content-hero">
+          <div className="container narrow">
+            <p className="micro-label">{page.label}</p>
+            <h1>{page.title}</h1>
+            <p className="content-intro">{page.intro}</p>
+            <div className="policy-meta">
+              <span>Last updated</span>
+              <strong>{page.updated}</strong>
+            </div>
+          </div>
+        </header>
+
+        <div className="container policy-layout">
+          <aside className="policy-toc" aria-label="On this page">
+            <strong>On this page</strong>
+            <nav>
+              {page.sections.map((section) => (
+                <a href={`#${sectionId(section.title)}`} key={section.title}>{section.title}</a>
+              ))}
+            </nav>
+          </aside>
+
+          <div className="policy-content">
+            {page.notice && <p className="policy-callout">{page.notice}</p>}
+            {page.sections.map((section) => (
+              <section className="policy-section" id={sectionId(section.title)} key={section.title}>
+                <h2>{section.title}</h2>
+                {section.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+                {section.bullets && (
+                  <ul className="policy-list">
+                    {section.bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}
+                  </ul>
+                )}
+                {section.links && (
+                  <div className="policy-links">
+                    {section.links.map((link) => {
+                      const external = link.href.startsWith("http");
+                      return (
+                        <Link
+                          className="policy-link"
+                          href={link.href}
+                          key={link.href}
+                          rel={external ? "noopener noreferrer" : undefined}
+                          target={external ? "_blank" : undefined}
+                        >
+                          {link.label} <span aria-hidden="true">→</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+            ))}
+            <div className="article-end">
+              <strong>Continue exploring</strong>
+              <Link href="/tools">Browse practical tools →</Link>
+            </div>
+          </div>
+        </div>
+      </article>
+      <Footer />
+    </main>
+  );
+}

@@ -79,3 +79,38 @@ test("provides working admin sections for products, affiliate links, blog and an
   assert.match(analyticsApi, /collection\("affiliateClicks"\)/);
   assert.match(affiliateRedirect, /collection\("products"\)/);
 });
+
+test("publishes complete trust, company and legal pages", async () => {
+  const [content, page, footer, sitemap, robots] = await Promise.all([
+    readFile(new URL("../lib/content-pages.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/[slug]/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/Footer.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/sitemap.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/robots.ts", import.meta.url), "utf8"),
+  ]);
+
+  for (const route of [
+    "about",
+    "editorial-policy",
+    "review-methodology",
+    "contact",
+    "affiliate-disclosure",
+    "privacy",
+    "terms",
+    "cookies",
+  ]) {
+    assert.match(content, new RegExp(`(?:[\"']${route}[\"']|\\b${route})\\s*:`));
+    assert.match(footer, new RegExp(`href=[\"']/${route}[\"']`));
+    assert.match(sitemap, new RegExp(`[\"']/${route}[\"']`));
+  }
+
+  assert.match(content, /Golden Spark Consultancy/);
+  assert.match(content, /Personal Data Protection Law/i);
+  assert.match(content, /Firebase Authentication/);
+  assert.match(content, /clear.*disclosure near/si);
+  assert.match(content, /laws of the Kingdom of Bahrain/i);
+  assert.match(content, /terms-of-service/);
+  assert.match(page, /policy-toc/);
+  assert.match(page, /generateMetadata/);
+  assert.match(robots, /disallow: \["\/admin", "\/api\/"\]/);
+});
