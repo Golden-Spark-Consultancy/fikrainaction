@@ -1,9 +1,12 @@
 import { FirebaseAccessError, getAdminFirestore, getAdminStorage, requireFirebaseAdmin } from "../../../lib/firebase/admin";
+import { getFirebaseServiceIssue } from "../../../lib/firebase/service-errors";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
 
 function errorResponse(error: unknown, fallback: string) {
   if (error instanceof FirebaseAccessError) return Response.json({ error: error.message }, { status: error.status });
+  const serviceIssue = getFirebaseServiceIssue(error);
+  if (serviceIssue) return Response.json(serviceIssue, { status: 503 });
   return Response.json({ error: error instanceof Error ? error.message : fallback }, { status: 500 });
 }
 
