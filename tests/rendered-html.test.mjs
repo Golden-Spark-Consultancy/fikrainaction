@@ -46,6 +46,20 @@ test("keeps administration private to the admin route", async () => {
   assert.doesNotMatch(adminGate, /GoogleAuthProvider|signInWithPopup|Continue with Google/);
 });
 
+test("uses the supplied logo in a dark, accessible navigation bar", async () => {
+  const [header, styles] = await Promise.all([
+    readFile(new URL("../app/components/Header.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(header, /src="\/fikra-in-action-logo\.png"/);
+  assert.match(header, /alt="Fikra in Action"/);
+  assert.match(styles, /\.site-header\s*\{[^}]*background:\s*rgba\(5,10,18,.97\)/);
+  assert.match(styles, /\.nav-links\s*\{[^}]*color:\s*#c9d5e3/);
+  assert.match(styles, /\.nav-links a:hover[^}]*color:\s*#ffffff/);
+  assert.match(styles, /\.mobile-toggle span[^}]*background:\s*#e7eef6/);
+});
+
 test("includes online image discovery and actionable Firebase setup handling", async () => {
   const [generator, discovery, serviceErrors] = await Promise.all([
     readFile(new URL("../lib/generator.ts", import.meta.url), "utf8"),

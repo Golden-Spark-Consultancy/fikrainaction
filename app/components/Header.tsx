@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -9,9 +10,16 @@ export function Header() {
   return (
     <header className="site-header">
       <div className="container nav-wrap">
-        <Link className="brand" href="/" aria-label="Fikra in Action home">
-          <span className="brand-mark"><i>F</i><b>→</b></span>
-          <span>Fikra<small>in action</small></span>
+        <Link className="navbar-brand" href="/" aria-label="Fikra in Action home">
+          <Image
+            className="nav-logo"
+            src="/fikra-in-action-logo.png"
+            alt="Fikra in Action"
+            width={1170}
+            height={607}
+            priority
+            unoptimized
+          />
         </Link>
         <button className="mobile-toggle" onClick={() => setOpen(!open)} aria-expanded={open} aria-label="Toggle navigation">
           <span /><span /><span />
