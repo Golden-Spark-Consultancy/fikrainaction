@@ -12,6 +12,17 @@ type PagePayload = {
   affiliateUrl?: string;
   affiliateDisclosure?: string;
   content?: unknown;
+  product?: {
+    name?: string;
+    type?: string;
+    category?: string;
+    description?: string;
+    officialUrl?: string;
+    affiliateUrl?: string;
+    audience?: string;
+    features?: string;
+    pricing?: string;
+  };
 };
 
 function errorResponse(error: unknown, fallback: string) {
@@ -34,7 +45,7 @@ export async function GET(request: Request) {
     const snapshot = await db.collection("landingPages").orderBy("updatedAt", "desc").limit(100).get();
     const pages = snapshot.docs.map((document) => {
       const page = document.data();
-      return { id: document.id, title: page.title, slug: page.slug, status: page.status, pageType: page.pageType, updatedAt: toIso(page.updatedAt) };
+      return { id: document.id, title: page.title, slug: page.slug, status: page.status, pageType: page.pageType, affiliateUrl: page.affiliateUrl, updatedAt: toIso(page.updatedAt) };
     });
     return Response.json({ pages });
   } catch (error) {
@@ -81,6 +92,25 @@ export async function POST(request: Request) {
     const batch = db.batch();
     batch.set(pageRef, page, { merge: true });
     batch.set(revisionRef, { pageId: body.slug, content: body.content ?? {}, html: safeHtml, changeType: status, createdBy: user.email || user.uid, createdAt: now });
+    if (body.product?.name && body.product.officialUrl && body.product.affiliateUrl) {
+      const productSlug = body.slug.replace(/-review$/, "");
+      batch.set(db.collection("products").doc(productSlug), {
+        slug: productSlug,
+        name: body.product.name,
+        type: body.product.type || "Software",
+        category: body.product.category || "Uncategorized",
+        description: body.product.description || "",
+        officialUrl: body.product.officialUrl,
+        affiliateUrl: body.product.affiliateUrl,
+        audience: body.product.audience || "",
+        features: body.product.features || "",
+        pricing: body.product.pricing || "",
+        status: status === "published" ? "active" : "draft",
+        pageSlug: body.slug,
+        updatedBy: user.email || user.uid,
+        updatedAt: now,
+      }, { merge: true });
+    }
     await batch.commit();
 
     return Response.json({ page: { id: body.slug, slug: body.slug, status, publicUrl: `/reviews/${body.slug}` } }, { status: 201 });

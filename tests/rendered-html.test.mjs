@@ -60,3 +60,22 @@ test("includes online image discovery and actionable Firebase setup handling", a
   assert.match(serviceErrors, /FIRESTORE_SETUP_REQUIRED/);
   assert.match(serviceErrors, /console\.firebase\.google\.com/);
 });
+
+test("provides working admin sections for products, affiliate links, blog and analytics", async () => {
+  const [studio, productsApi, postsApi, analyticsApi, affiliateRedirect] = await Promise.all([
+    readFile(new URL("../app/admin/AdminStudio.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/products/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/posts/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/analytics/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/go/[slug]/route.ts", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(studio, /changeView\("products"\)/);
+  assert.match(studio, /changeView\("affiliates"\)/);
+  assert.match(studio, /changeView\("blog"\)/);
+  assert.match(studio, /openAnalytics/);
+  assert.match(productsApi, /collection\("products"\)/);
+  assert.match(postsApi, /collection\("blogPosts"\)/);
+  assert.match(analyticsApi, /collection\("affiliateClicks"\)/);
+  assert.match(affiliateRedirect, /collection\("products"\)/);
+});
