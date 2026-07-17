@@ -60,6 +60,20 @@ test("uses the supplied logo in a dark, accessible navigation bar", async () => 
   assert.match(styles, /\.mobile-toggle span[^}]*background:\s*#e7eef6/);
 });
 
+test("uses a light silver-blue theme with matching dark footer", async () => {
+  const [footer, styles] = await Promise.all([
+    readFile(new URL("../app/components/Footer.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(footer, /src="\/fikra-in-action-logo\.png"/);
+  assert.match(styles, /--cream:\s*#f3f7fb/);
+  assert.match(styles, /--blue:\s*#168cff/);
+  assert.match(styles, /\.hero-shell[^}]*#f1f6fb/);
+  assert.match(styles, /\.site-footer[^}]*background:\s*var\(--navy\)/);
+  assert.match(styles, /\.footer-grid > div > strong[^}]*color:\s*#65b5ff/);
+});
+
 test("includes online image discovery and actionable Firebase setup handling", async () => {
   const [generator, discovery, serviceErrors] = await Promise.all([
     readFile(new URL("../lib/generator.ts", import.meta.url), "utf8"),
