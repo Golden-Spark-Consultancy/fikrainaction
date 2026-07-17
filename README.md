@@ -10,14 +10,14 @@ Fikra in Action is a full-stack affiliate content platform built with Next.js an
 
 - Configured production project: `fikra-e47d9`
 - Configured administrator: `goldensparkbh@gmail.com`
-- Deployment repository: `goldensparkbh/fikrainaction`
+- Deployment repository: `Golden-Spark-Consultancy/fikrainaction`
 
 ## Firebase setup
 
 1. In the `fikra-e47d9` Firebase project, enable Cloud Firestore in Native mode.
 2. Enable Cloud Storage.
 3. Enable Google as a Firebase Authentication provider.
-4. Connect `goldensparkbh/fikrainaction` under **Firebase Console → App Hosting → Create backend**.
+4. Connect `Golden-Spark-Consultancy/fikrainaction` under **Firebase Console → App Hosting → Create backend**.
 5. Set the repository root to `/` and production branch to `main`.
 6. Deploy the included Firestore and Storage rules:
 
