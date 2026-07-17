@@ -26,7 +26,6 @@ export function Header() {
         </nav>
         <div className="nav-actions">
           <Link className="search-button" href="/tools" aria-label="Search">⌕</Link>
-          <Link className="admin-link" href="/admin">Admin</Link>
           <Link className="nav-cta" href="/tools">Find a tool <span>→</span></Link>
         </div>
       </div>
