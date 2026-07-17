@@ -3,7 +3,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { contentPages, type ContentPage } from "../../lib/content-pages";
 import { Footer } from "../components/Footer";
-import { Header } from "../components/Header";
 
 const fallbackPages: Record<string, ContentPage> = {
   tutorials: {
@@ -67,7 +66,7 @@ export default async function StaticPage({ params }: { params: Promise<{ slug: s
 
   return (
     <main>
-      <Header />
+
       <article className="policy-page">
         <header className="content-hero">
           <div className="container narrow">

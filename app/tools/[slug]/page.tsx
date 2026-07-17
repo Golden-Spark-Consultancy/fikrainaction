@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Header } from "../../components/Header";
 import { tools } from "../../../lib/data";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -23,7 +22,7 @@ export default async function ToolReview({ params }: Props) {
 
   return (
     <main>
-      <Header />
+
       <article>
         <div className="container breadcrumb"><Link href="/tools">Tools</Link><span>›</span><span>{tool.category}</span><span>›</span><strong>{tool.name}</strong></div>
         <section className="review-hero">

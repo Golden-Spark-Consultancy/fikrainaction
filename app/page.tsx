@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Footer } from "./components/Footer";
-import { Header } from "./components/Header";
 import { categories, posts, tools } from "../lib/data";
 
 const featured = tools.slice(0, 3);
@@ -8,7 +7,7 @@ const featured = tools.slice(0, 3);
 export default function Home() {
   return (
     <main>
-      <Header />
+
 
       <section className="hero-shell">
         <div className="hero-glow" aria-hidden="true" />

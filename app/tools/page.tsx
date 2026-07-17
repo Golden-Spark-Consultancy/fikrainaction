@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Header } from "../components/Header";
 import { ToolsDirectory } from "./ToolsDirectory";
 import { tools } from "../../lib/data";
 
@@ -11,7 +10,7 @@ export const metadata: Metadata = {
 export default function ToolsPage() {
   return (
     <main>
-      <Header />
+
       <section className="directory-hero">
         <div className="container compact-hero">
           <p className="eyebrow"><span /> Curated and independently reviewed</p>

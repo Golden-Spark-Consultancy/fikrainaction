@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getAdminFirestore } from "../../../lib/firebase/admin";
-import { Header } from "../../components/Header";
 
 type Props = { params: Promise<{ slug: string }> };
 type PublishedPage = { title: string; status: string; seoTitle: string; metaDescription: string; html: string; updatedAt?: { toDate(): Date } };
@@ -27,5 +26,5 @@ export default async function GeneratedReview({ params }: Props) {
   const page = await findPage(slug);
   if (!page || page.status !== "published") notFound();
   const updated = page.updatedAt?.toDate?.() ?? new Date();
-  return <main><Header /><article className="generated-page"><div className="container generated-content" dangerouslySetInnerHTML={{ __html: page.html }} /><div className="container generated-meta">Last updated {updated.toLocaleDateString("en-GB")} · Editorial status: Published</div></article></main>;
+  return <main><article className="generated-page"><div className="container generated-content" dangerouslySetInnerHTML={{ __html: page.html }} /><div className="container generated-meta">Last updated {updated.toLocaleDateString("en-GB")} · Editorial status: Published</div></article></main>;
 }
