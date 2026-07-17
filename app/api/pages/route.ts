@@ -1,4 +1,5 @@
 import { FirebaseAccessError, getAdminFirestore, requireFirebaseAdmin } from "../../../lib/firebase/admin";
+import { getFirebaseServiceIssue } from "../../../lib/firebase/service-errors";
 import { sanitizeHtml } from "../../../lib/sanitize";
 
 type PagePayload = {
@@ -15,6 +16,8 @@ type PagePayload = {
 
 function errorResponse(error: unknown, fallback: string) {
   if (error instanceof FirebaseAccessError) return Response.json({ error: error.message }, { status: error.status });
+  const serviceIssue = getFirebaseServiceIssue(error);
+  if (serviceIssue) return Response.json(serviceIssue, { status: 503 });
   return Response.json({ error: error instanceof Error ? error.message : fallback }, { status: 500 });
 }
 
