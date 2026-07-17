@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const developmentPreviewMeta =
@@ -30,4 +31,17 @@ test("renders development preview metadata", async () => {
     /^text\/html\b/i,
   );
   assert.match(await response.text(), developmentPreviewMeta);
+});
+
+test("keeps administration private to the admin route", async () => {
+  const [header, adminGate] = await Promise.all([
+    readFile(new URL("../app/components/Header.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/admin/AdminGate.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.doesNotMatch(header, /href=["']\/admin["']/i);
+  assert.match(adminGate, /signInWithEmailAndPassword/);
+  assert.match(adminGate, /type="email"/);
+  assert.match(adminGate, /type="password"/);
+  assert.doesNotMatch(adminGate, /GoogleAuthProvider|signInWithPopup|Continue with Google/);
 });
