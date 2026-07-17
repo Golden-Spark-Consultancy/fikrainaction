@@ -1,0 +1,21 @@
+runConfig:
+  minInstances: 0
+  maxInstances: 10
+  concurrency: 40
+  cpu: 1
+  memoryMiB: 512
+
+env:
+  - variable: FIREBASE_ADMIN_EMAILS
+    value: goldensparkbh@gmail.com
+    availability:
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_ADMIN_EMAIL
+    value: goldensparkbh@gmail.com
+    availability:
+      - BUILD
+      - RUNTIME
+
+# Firebase App Hosting automatically provides FIREBASE_CONFIG and
+# FIREBASE_WEBAPP_CONFIG when this repository is connected to a Firebase web app.
+# The application uses those values for Admin SDK and browser SDK initialization.
