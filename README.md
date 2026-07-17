@@ -7,6 +7,7 @@ Fikra in Action is a full-stack affiliate content platform built with Next.js an
 - Cloud Storage for Firebase for validated page-image and video uploads
 - Firebase Authentication with email-and-password sign-in for the administration studio
 - Firebase custom claims for administrator authorization
+- Automatic product-image and official-site screenshot discovery through Microlink metadata
 
 - Configured production project: `fikra-e47d9`
 - Configured administrator: `goldensparkbh@gmail.com`
@@ -24,8 +25,10 @@ Fikra in Action is a full-stack affiliate content platform built with Next.js an
    ```bash
    npx firebase-tools login
    npx firebase-tools use fikra-e47d9
-   npm run firebase:deploy:rules
-   ```
+npm run firebase:deploy:rules
+```
+
+If the administration studio reports `FIRESTORE_SETUP_REQUIRED`, open the project in Firebase Console, go to **Databases & Storage → Firestore**, click **Create database**, select Native mode and a location, then allow a few minutes for the API to become available.
 
 Firebase App Hosting supplies `FIREBASE_CONFIG` and `FIREBASE_WEBAPP_CONFIG` automatically. For local development, copy `.env.example` to `.env.local` and add the Web App configuration from Firebase Console.
 
