@@ -45,3 +45,18 @@ test("keeps administration private to the admin route", async () => {
   assert.match(adminGate, /type="password"/);
   assert.doesNotMatch(adminGate, /GoogleAuthProvider|signInWithPopup|Continue with Google/);
 });
+
+test("includes online image discovery and actionable Firebase setup handling", async () => {
+  const [generator, discovery, serviceErrors] = await Promise.all([
+    readFile(new URL("../lib/generator.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/image-discovery.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/firebase/service-errors.ts", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(discovery, /api\.microlink\.io/);
+  assert.match(discovery, /screenshot/);
+  assert.match(generator, /generated-media/);
+  assert.match(generator, /Image source:/);
+  assert.match(serviceErrors, /FIRESTORE_SETUP_REQUIRED/);
+  assert.match(serviceErrors, /console\.firebase\.google\.com/);
+});
