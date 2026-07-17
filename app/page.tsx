@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Footer } from "./components/Footer";
 import { categories, posts, tools } from "../lib/data";
 
 const featured = tools.slice(0, 3);
@@ -7,8 +6,6 @@ const featured = tools.slice(0, 3);
 export default function Home() {
   return (
     <main>
-
-
       <section className="hero-shell">
         <div className="hero-glow" aria-hidden="true" />
         <div className="container hero-grid">
@@ -119,7 +116,6 @@ export default function Home() {
         <form><label className="sr-only" htmlFor="email">Email address</label><input id="email" type="email" placeholder="Your email address" /><button>Join the newsletter</button></form>
       </section>
 
-      <Footer />
     </main>
   );
 }

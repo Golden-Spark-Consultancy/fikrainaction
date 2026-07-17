@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { contentPages, type ContentPage } from "../../lib/content-pages";
-import { Footer } from "../components/Footer";
 
 const fallbackPages: Record<string, ContentPage> = {
   tutorials: {
@@ -128,7 +127,6 @@ export default async function StaticPage({ params }: { params: Promise<{ slug: s
           </div>
         </div>
       </article>
-      <Footer />
     </main>
   );
 }

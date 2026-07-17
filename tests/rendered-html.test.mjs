@@ -60,7 +60,7 @@ test("uses the supplied logo in a dark, accessible navigation bar", async () => 
   assert.match(styles, /\.mobile-toggle span[^}]*background:\s*#e7eef6/);
 });
 
-test("applies the shared header to every public route while keeping admin separate", async () => {
+test("applies shared header and footer to every public route while keeping admin separate", async () => {
   const [layout, chrome, adminPage] = await Promise.all([
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/components/SiteChrome.tsx", import.meta.url), "utf8"),
@@ -69,6 +69,7 @@ test("applies the shared header to every public route while keeping admin separa
 
   assert.match(layout, /<SiteChrome>\{children\}<\/SiteChrome>/);
   assert.match(chrome, /!isAdminRoute\s*&&\s*<Header\s*\/>/);
+  assert.match(chrome, /!isAdminRoute\s*&&\s*<Footer\s*\/>/);
   assert.match(chrome, /pathname\.startsWith\("\/admin\/"\)/);
   assert.doesNotMatch(adminPage, /<Header\s*\/>/);
 });

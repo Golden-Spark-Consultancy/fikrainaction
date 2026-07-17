@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { Footer } from "./Footer";
 import { Header } from "./Header";
 
 export function SiteChrome({ children }: { children: React.ReactNode }) {
@@ -11,6 +12,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
     <>
       {!isAdminRoute && <Header />}
       {children}
+      {!isAdminRoute && <Footer />}
     </>
   );
 }
