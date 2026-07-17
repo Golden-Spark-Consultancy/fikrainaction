@@ -9,6 +9,8 @@ import { firebaseAuthorizedFetch } from "../../lib/firebase/api";
 
 type SavedPage = { id: string; title: string; slug: string; status: string; pageType: string; updatedAt: string };
 type MediaAsset = { id: string; name: string; contentType: string; size: number; url: string; uploadedAt: string };
+type ApiPayload = { error?: string; setupUrl?: string; pages?: SavedPage[]; assets?: MediaAsset[]; [key: string]: unknown };
+type PlatformNotice = { message: string; setupUrl: string };
 const initialInput: GenerationInput = { name: "", type: "AI tool", category: "Artificial Intelligence", description: "", officialUrl: "", affiliateUrl: "", audience: "", features: "", pricing: "", pageType: "Full Product Review", tone: "Practical and credible" };
 
 export function AdminStudio({ user, onSignOut }: { user: { name: string; email: string }; onSignOut: () => Promise<void> }) {
@@ -23,16 +25,36 @@ export function AdminStudio({ user, onSignOut }: { user: { name: string; email: 
   const [assets, setAssets] = useState<MediaAsset[]>([]);
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [platformNotice, setPlatformNotice] = useState<PlatformNotice | null>(null);
 
-  useEffect(() => { firebaseAuthorizedFetch("/api/pages").then((response) => response.ok ? response.json() : { pages: [] }).then((data) => setPages(data.pages ?? [])).catch(() => setPages([])); }, []);
+  useEffect(() => {
+    firebaseAuthorizedFetch("/api/pages")
+      .then(async (response) => ({ response, data: await response.json() as ApiPayload }))
+      .then(({ response, data }) => {
+        if (!response.ok) {
+          if (data.setupUrl) setPlatformNotice({ message: data.error || "Firebase setup is required.", setupUrl: data.setupUrl });
+          setPages([]);
+          return;
+        }
+        setPlatformNotice(null);
+        setPages(data.pages ?? []);
+      })
+      .catch(() => setPages([]));
+  }, []);
   const update = (field: keyof GenerationInput, value: string) => setInput((current) => ({ ...current, [field]: value }));
+
+  function apiError(data: ApiPayload, fallback: string) {
+    if (data.setupUrl) setPlatformNotice({ message: data.error || fallback, setupUrl: data.setupUrl });
+    return data.error || fallback;
+  }
 
   async function generate() {
     setLoading(true); setMessage("");
     try {
       const response = await firebaseAuthorizedFetch("/api/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(input) });
-      const data = await response.json(); if (!response.ok) throw new Error(data.error || "Generation failed");
-      setGenerated(data.page); setHtml(data.page.html); setEditorTab("visual"); setMessage("Draft generated. Review every marked fact before publishing.");
+      const data = await response.json(); if (!response.ok) throw new Error(apiError(data, "Generation failed"));
+      const imageCount = data.page.images?.length ?? 0;
+      setGenerated(data.page); setHtml(data.page.html); setEditorTab("visual"); setMessage(`Draft generated${imageCount ? ` with ${imageCount} online image${imageCount === 1 ? "" : "s"}` : ""}. Review every marked fact and image before publishing.`);
     } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to generate the page."); }
     finally { setLoading(false); }
   }
@@ -41,7 +63,8 @@ export function AdminStudio({ user, onSignOut }: { user: { name: string; email: 
     if (!generated) return; setLoading(true); setMessage("");
     try {
       const response = await firebaseAuthorizedFetch("/api/pages", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ title: generated.title, slug: generated.slug, pageType: generated.pageType, status, seo: generated.seo, html, affiliateUrl: input.affiliateUrl, affiliateDisclosure: generated.affiliateDisclosure, content: generated }) });
-      const data = await response.json(); if (!response.ok) throw new Error(data.error || "Save failed");
+      const data = await response.json(); if (!response.ok) throw new Error(apiError(data, "Save failed"));
+      setPlatformNotice(null);
       setMessage(status === "published" ? `Published successfully: ${data.page.publicUrl}` : "Draft saved successfully.");
       const refreshed = await firebaseAuthorizedFetch("/api/pages").then((result) => result.json()); setPages(refreshed.pages ?? []);
     } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to save the page."); }
@@ -53,7 +76,8 @@ export function AdminStudio({ user, onSignOut }: { user: { name: string; email: 
     try {
       const response = await firebaseAuthorizedFetch("/api/media");
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Unable to load media");
+      if (!response.ok) throw new Error(apiError(data, "Unable to load media"));
+      setPlatformNotice(null);
       setAssets(data.assets ?? []);
     } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to load media."); }
   }
@@ -65,7 +89,8 @@ export function AdminStudio({ user, onSignOut }: { user: { name: string; email: 
       const form = new FormData(); form.append("file", mediaFile);
       const response = await firebaseAuthorizedFetch("/api/media", { method: "POST", body: form });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Upload failed");
+      if (!response.ok) throw new Error(apiError(data, "Upload failed"));
+      setPlatformNotice(null);
       setAssets((current) => [data.asset, ...current]); setMediaFile(null); setMessage("Media uploaded to Firebase Storage successfully.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to upload the file."); }
     finally { setUploading(false); }
@@ -80,6 +105,7 @@ export function AdminStudio({ user, onSignOut }: { user: { name: string; email: 
       </aside>
       <section className="admin-workspace">
         <header className="admin-topbar"><div><p className="micro-label">Content command centre</p><h1>{view === "overview" ? "Overview" : view === "generator" ? "AI landing page generator" : view === "media" ? "Firebase media library" : "Landing pages"}</h1></div><button onClick={() => setView("generator")}>+ Create landing page</button></header>
+        {platformNotice && <aside className="admin-platform-notice" role="alert"><div><strong>Firebase setup required</strong><p>{platformNotice.message}</p></div><a href={platformNotice.setupUrl} target="_blank" rel="noopener noreferrer">Open Firebase setup ↗</a></aside>}
 
         {view === "overview" && <div className="admin-view"><section className="stat-grid"><article><span>Published pages</span><strong>{pages.filter((page) => page.status === "published").length}</strong><small>Live and indexable</small></article><article><span>Drafts</span><strong>{pages.filter((page) => page.status === "draft").length}</strong><small>Awaiting review</small></article><article><span>Tracked products</span><strong>6</strong><small>Seed catalogue</small></article><article><span>Review health</span><strong>100%</strong><small>Disclosures present</small></article></section><section className="admin-panel welcome-panel"><div><p className="micro-label">Recommended next action</p><h2>Create your first real affiliate landing page.</h2><p>Enter the verified product information, generate a structured draft, edit the content or HTML, then publish it to its own review URL.</p><button onClick={() => setView("generator")}>Start generating <span>→</span></button></div><div className="workflow-steps"><span className="done">1</span><p><strong>Add product facts</strong><small>URLs, audience, pricing and features</small></p><span>2</span><p><strong>Generate & review</strong><small>Structured content, SEO and disclosure</small></p><span>3</span><p><strong>Publish & track</strong><small>Unique URL and affiliate analytics</small></p></div></section><section className="admin-panel"><div className="panel-title"><div><p className="micro-label">Recent content</p><h2>Landing pages</h2></div><button onClick={() => setView("pages")}>View all →</button></div><PageTable pages={pages} /></section></div>}
 
@@ -88,7 +114,7 @@ export function AdminStudio({ user, onSignOut }: { user: { name: string; email: 
             <div className="form-grid"><label>Product or service name *<input value={input.name} onChange={(event) => update("name", event.target.value)} placeholder="e.g. monday.com" /></label><label>Product type *<select value={input.type} onChange={(event) => update("type", event.target.value)}><option>AI tool</option><option>SaaS</option><option>Software</option><option>Online service</option><option>Course</option><option>Digital product</option></select></label><label>Category *<input value={input.category} onChange={(event) => update("category", event.target.value)} /></label><label>Page type *<select value={input.pageType} onChange={(event) => update("pageType", event.target.value)}><option>Full Product Review</option><option>Product Overview</option><option>Product Comparison</option><option>Alternatives Page</option><option>How-to Tutorial</option><option>Deal Page</option></select></label><label className="full-field">Short description *<textarea value={input.description} onChange={(event) => update("description", event.target.value)} rows={3} placeholder="Describe what the product does using verified information." /></label><label>Official product URL *<input type="url" value={input.officialUrl} onChange={(event) => update("officialUrl", event.target.value)} placeholder="https://" /></label><label>Affiliate URL *<input type="url" value={input.affiliateUrl} onChange={(event) => update("affiliateUrl", event.target.value)} placeholder="https://" /></label><label className="full-field">Target audience *<input value={input.audience} onChange={(event) => update("audience", event.target.value)} placeholder="e.g. small marketing teams and agencies" /></label><label className="full-field">Main features<textarea value={input.features} onChange={(event) => update("features", event.target.value)} rows={4} placeholder="One feature per line. Only include verified features." /></label><label>Pricing information<input value={input.pricing} onChange={(event) => update("pricing", event.target.value)} placeholder="e.g. Free plan; paid from $12/month" /></label><label>Tone<select value={input.tone} onChange={(event) => update("tone", event.target.value)}><option>Practical and credible</option><option>Professional</option><option>Beginner-friendly</option><option>Concise</option></select></label></div>
             <button className="generate-button" onClick={generate} disabled={loading}>{loading ? "Generating structured page…" : "✦ Generate landing page"}<span>→</span></button>
           </section>
-          <aside className="generator-help"><div><strong>Content safeguards</strong><ul><li>AI drafts are never published automatically</li><li>Unverified facts receive clear warnings</li><li>Affiliate disclosures are inserted by default</li><li>HTML is sanitized before saving</li></ul></div><div><strong>Included in the draft</strong><p>Hero, benefits, features, audience fit, pricing, advantages, limitations, FAQs, SEO metadata, CTAs, and disclosure.</p></div></aside>
+          <aside className="generator-help"><div><strong>Content safeguards</strong><ul><li>AI drafts are never published automatically</li><li>Unverified facts receive clear warnings</li><li>Official online images include source attribution</li><li>HTML is sanitized before saving</li></ul></div><div><strong>Included in the draft</strong><p>Hero, relevant online product images, benefits, features, audience fit, pricing, limitations, FAQs, SEO metadata, CTAs, and disclosure.</p></div></aside>
           {generated && <section className="editor-panel admin-panel"><div className="editor-head"><div><p className="micro-label">Step 2 of 3</p><h2>{generated.title}</h2><span className="draft-badge">Draft · Fact-check required</span></div><div className="editor-actions"><button onClick={() => save("draft")} disabled={loading}>Save draft</button><button className="publish-button" onClick={() => save("published")} disabled={loading}>Publish page</button></div></div><div className="warning-strip">⚑ {generated.warnings.join(" ")}</div><div className="editor-tabs"><button className={editorTab === "visual" ? "active" : ""} onClick={() => setEditorTab("visual")}>Visual preview</button><button className={editorTab === "html" ? "active" : ""} onClick={() => setEditorTab("html")}>HTML editor</button><button className={editorTab === "seo" ? "active" : ""} onClick={() => setEditorTab("seo")}>SEO</button></div>{editorTab === "visual" && <div className="generated-preview" dangerouslySetInnerHTML={{ __html: html }} />}{editorTab === "html" && <textarea className="html-editor" value={html} onChange={(event) => setHtml(event.target.value)} spellCheck={false} />}{editorTab === "seo" && <div className="seo-editor"><label>SEO title<input value={generated.seo.title} onChange={(event) => setGenerated({ ...generated, seo: { ...generated.seo, title: event.target.value } })} /><small>{generated.seo.title.length}/60 recommended characters</small></label><label>Meta description<textarea rows={3} value={generated.seo.description} onChange={(event) => setGenerated({ ...generated, seo: { ...generated.seo, description: event.target.value } })} /><small>{generated.seo.description.length}/160 recommended characters</small></label><label>URL slug<input value={generated.slug} onChange={(event) => setGenerated({ ...generated, slug: event.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, "-") })} /></label><div className="search-preview"><small>fikrainaction.com › reviews › {generated.slug}</small><strong>{generated.seo.title}</strong><p>{generated.seo.description}</p></div></div>} {message && <div className="status-message">{message}</div>}</section>}
         </div>}
 
