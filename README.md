@@ -5,7 +5,7 @@ Fikra in Action is a full-stack affiliate content platform built with Next.js an
 - Firebase App Hosting for the Next.js website and server routes
 - Cloud Firestore for landing pages, revisions, products, posts, and affiliate-click records
 - Cloud Storage for Firebase for validated page-image and video uploads
-- Firebase Authentication with Google sign-in for the administration studio
+- Firebase Authentication with email-and-password sign-in for the administration studio
 - Firebase custom claims for administrator authorization
 
 - Configured production project: `fikra-e47d9`
@@ -16,7 +16,7 @@ Fikra in Action is a full-stack affiliate content platform built with Next.js an
 
 1. In the `fikra-e47d9` Firebase project, enable Cloud Firestore in Native mode.
 2. Enable Cloud Storage.
-3. Enable Google as a Firebase Authentication provider.
+3. Enable Email/Password as a Firebase Authentication provider and create the administrator user.
 4. Connect `Golden-Spark-Consultancy/fikrainaction` under **Firebase Console → App Hosting → Create backend**.
 5. Set the repository root to `/` and production branch to `main`.
 6. Deploy the included Firestore and Storage rules:
@@ -31,7 +31,7 @@ Firebase App Hosting supplies `FIREBASE_CONFIG` and `FIREBASE_WEBAPP_CONFIG` aut
 
 ## Grant the first administrator
 
-`goldensparkbh@gmail.com` is accepted as the initial administrator after signing in through `/admin`. Additional administrators can be granted the custom claim after they have signed in once:
+`goldensparkbh@gmail.com` is accepted as the initial administrator after signing in through `/admin` with its Firebase email/password account. Additional administrators can be granted the custom claim after their Firebase Authentication users have been created:
 
 ```bash
 gcloud auth application-default login
