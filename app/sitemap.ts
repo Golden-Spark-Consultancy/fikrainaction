@@ -5,6 +5,8 @@ const routes = [
   "",
   "/tools",
   "/comparisons",
+  "/compare/semrush-vs-ahrefs-vs-ubersuggest",
+  "/compare/notion-ai-vs-clickup",
   "/blog",
   "/tutorials",
   "/deals",
