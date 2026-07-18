@@ -2,6 +2,8 @@ import type { App, AppOptions } from "firebase-admin/app";
 import type { DecodedIdToken } from "firebase-admin/auth";
 
 let adminAppPromise: Promise<App> | null = null;
+type GoogleCredential = { getAccessToken(): Promise<{ access_token: string; expires_in: number }> };
+let googleCredentialPromise: Promise<GoogleCredential> | null = null;
 
 function parseFirebaseConfig() {
   try {
@@ -33,6 +35,19 @@ async function createAdminApp() {
 async function getAdminApp() {
   adminAppPromise ??= createAdminApp();
   return adminAppPromise;
+}
+
+async function getGoogleCredential(): Promise<GoogleCredential> {
+  const { applicationDefault, cert } = await import("firebase-admin/app");
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) return cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON));
+  return applicationDefault();
+}
+
+export async function getGoogleAccessToken() {
+  googleCredentialPromise ??= getGoogleCredential();
+  const token = await (await googleCredentialPromise).getAccessToken();
+  if (!token.access_token) throw new Error("Google application credentials did not return an access token.");
+  return token.access_token;
 }
 
 export async function getAdminFirestore() {

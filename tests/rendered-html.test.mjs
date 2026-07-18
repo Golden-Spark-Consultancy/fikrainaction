@@ -103,6 +103,40 @@ test("includes online image discovery and actionable Firebase setup handling", a
   assert.match(serviceErrors, /console\.firebase\.google\.com/);
 });
 
+test("creates complete AI landing pages from one platform link", async () => {
+  const [studio, route, ai, research, generator, youtube, sanitizer] = await Promise.all([
+    readFile(new URL("../app/admin/AdminStudio.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/generate/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/ai-generator.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/platform-research.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/generator.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/youtube.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/sanitize.ts", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(studio, /initialInput:\s*GenerationInput\s*=\s*\{\s*platformUrl:\s*["']["']\s*\}/);
+  assert.match(studio, /One link only/);
+  assert.match(studio, /No description, features, audience, packages, pricing, or media links are required/);
+  assert.doesNotMatch(studio, /value=\{input\.(?:name|description|features|pricing|audience|affiliateUrl)\}/);
+  assert.match(route, /researchPlatform\(platformUrl\)/);
+  assert.match(route, /generateAiLandingDraft\(research\)/);
+  assert.match(route, /generateAndStoreAiImages/);
+  assert.match(research, /validatePublicPlatformUrl/);
+  assert.match(research, /pricing/);
+  assert.match(ai, /gemini-2\.5-flash/);
+  assert.match(ai, /gemini-2\.5-flash-image/);
+  assert.match(ai, /generated-media/);
+  assert.match(ai, /Vertex AI User/);
+  assert.match(youtube, /youtube\/v3\/search/);
+  assert.match(youtube, /videoEmbeddable/);
+  assert.match(youtube, /youtube-nocookie\.com/);
+  assert.match(generator, /video\.embedUrl/);
+  assert.match(generator, /Plans and pricing/);
+  assert.match(generator, /Official sources reviewed/);
+  assert.match(generator, /AI-generated editorial illustration/);
+  assert.match(sanitizer, /youtube-nocookie/);
+});
+
 test("provides working admin sections for products, affiliate links, blog and analytics", async () => {
   const [studio, productsApi, postsApi, analyticsApi, affiliateRedirect] = await Promise.all([
     readFile(new URL("../app/admin/AdminStudio.tsx", import.meta.url), "utf8"),

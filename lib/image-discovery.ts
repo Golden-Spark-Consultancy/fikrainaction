@@ -1,4 +1,6 @@
-import type { GeneratedImage, GenerationInput } from "./generator";
+import type { GeneratedImage } from "./generator";
+
+type ImageDiscoveryInput = { name: string; officialUrl: string };
 
 type MicrolinkMedia = string | { url?: string } | null | undefined;
 type MicrolinkPayload = {
@@ -24,7 +26,7 @@ function validOnlineImage(value: string | undefined) {
   }
 }
 
-export async function discoverProductImages(input: GenerationInput): Promise<GeneratedImage[]> {
+export async function discoverProductImages(input: ImageDiscoveryInput): Promise<GeneratedImage[]> {
   try {
     const endpoint = new URL("https://api.microlink.io");
     endpoint.searchParams.set("url", input.officialUrl);
@@ -43,9 +45,9 @@ export async function discoverProductImages(input: GenerationInput): Promise<Gen
     if (payload.status !== "success" || !payload.data) return [];
 
     const candidates: Array<Omit<GeneratedImage, "url"> & { url?: string }> = [
-      { url: mediaUrl(payload.data.image), alt: `${input.name} product overview`, sourceLabel: "Official product website", sourceUrl: input.officialUrl, role: "hero" },
-      { url: mediaUrl(payload.data.screenshot), alt: `${input.name} official website screenshot`, sourceLabel: "Official product website screenshot", sourceUrl: input.officialUrl, role: "screenshot" },
-      { url: mediaUrl(payload.data.logo), alt: `${input.name} logo`, sourceLabel: "Official product website", sourceUrl: input.officialUrl, role: "logo" },
+      { url: mediaUrl(payload.data.image), alt: `${input.name} product overview`, sourceLabel: "Official product website", sourceUrl: input.officialUrl, role: "hero", origin: "official" },
+      { url: mediaUrl(payload.data.screenshot), alt: `${input.name} official website screenshot`, sourceLabel: "Official product website screenshot", sourceUrl: input.officialUrl, role: "screenshot", origin: "official" },
+      { url: mediaUrl(payload.data.logo), alt: `${input.name} logo`, sourceLabel: "Official product website", sourceUrl: input.officialUrl, role: "logo", origin: "official" },
     ];
 
     const seen = new Set<string>();
