@@ -1,11 +1,12 @@
 import type { MetadataRoute } from "next";
 
-const baseUrl = "https://fikra-e47d9.web.app";
+const baseUrl = "https://fikrainaction.com";
 const routes = [
   "",
   "/tools",
   "/comparisons",
   "/compare/semrush-vs-ahrefs-vs-ubersuggest",
+  "/compare/descript-vs-riverside",
   "/compare/notion-ai-vs-clickup",
   "/blog",
   "/tutorials",
