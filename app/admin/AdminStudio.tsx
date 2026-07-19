@@ -105,13 +105,16 @@ export function AdminStudio({ user, onSignOut }: { user: { name: string; email: 
   }
 
   async function generate() {
-    if (!input.officialUrl.trim()) {
+    const enteredUrl = input.officialUrl.trim();
+    if (!enteredUrl) {
       setMessage("Paste the product or platform URL first.");
       return;
     }
+    const normalizedUrl = /^[a-z][a-z\d+.-]*:\/\//i.test(enteredUrl) ? enteredUrl : `https://${enteredUrl}`;
+    setInput((current) => ({ ...current, officialUrl: normalizedUrl }));
     setLoading(true); setMessage("");
     try {
-      const response = await firebaseAuthorizedFetch("/api/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(input) });
+      const response = await firebaseAuthorizedFetch("/api/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ officialUrl: normalizedUrl }) });
       const data = await response.json(); if (!response.ok) throw new Error(apiError(data, "Generation failed"));
       const imageCount = data.page.images?.length ?? 0;
       setInput(data.product); setGenerated(data.page); setHtml(data.page.html); setEditorTab("visual"); setMessage(`Complete landing page generated${imageCount ? ` with ${imageCount} relevant image${imageCount === 1 ? "" : "s"}` : ""}. Review it, then publish when ready.`);
