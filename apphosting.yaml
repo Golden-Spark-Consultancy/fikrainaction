@@ -19,6 +19,10 @@ env:
     secret: GEMINI_API_KEY
     availability:
       - RUNTIME
+  - variable: GEMINI_MODEL
+    value: gemini-3.5-flash
+    availability:
+      - RUNTIME
   # The application also recognizes GOOGLE_API_KEY, GOOGLE_GENAI_API_KEY, and
   # GOOGLE_GENERATIVE_AI_API_KEY when supplied by an existing environment.
   - variable: YOUTUBE_API_KEY
