@@ -28,6 +28,7 @@ export type GeneratedPage = {
   hero: { headline: string; subheadline: string; primaryCta: { text: string; url: string } };
   sections: { id: string; type: string; heading: string; content: string }[];
   images: GeneratedImage[];
+  videos?: { id: string; title: string; channelTitle: string; embedUrl: string }[];
   html: string;
   affiliateDisclosure: string;
   warnings: string[];

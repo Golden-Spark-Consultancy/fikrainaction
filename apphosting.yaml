@@ -15,6 +15,14 @@ env:
     availability:
       - BUILD
       - RUNTIME
+  - variable: GEMINI_API_KEY
+    secret: GEMINI_API_KEY
+    availability:
+      - RUNTIME
+  - variable: YOUTUBE_API_KEY
+    secret: YOUTUBE_API_KEY
+    availability:
+      - RUNTIME
 
 # Firebase App Hosting automatically provides FIREBASE_CONFIG and
 # FIREBASE_WEBAPP_CONFIG when this repository is connected to a Firebase web app.
