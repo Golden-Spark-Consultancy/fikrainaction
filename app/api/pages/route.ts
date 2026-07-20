@@ -42,6 +42,13 @@ export async function GET(request: Request) {
   try {
     await requireFirebaseAdmin(request);
     const db = await getAdminFirestore();
+    const id = new URL(request.url).searchParams.get("id");
+    if (id) {
+      const document = await db.collection("landingPages").doc(id).get();
+      if (!document.exists) return Response.json({ error: "Landing page not found." }, { status: 404 });
+      const page = document.data()!;
+      return Response.json({ page: { id: document.id, ...page, updatedAt: toIso(page.updatedAt) } });
+    }
     const snapshot = await db.collection("landingPages").orderBy("updatedAt", "desc").limit(100).get();
     const pages = snapshot.docs.map((document) => {
       const page = document.data();
@@ -51,6 +58,42 @@ export async function GET(request: Request) {
   } catch (error) {
     return errorResponse(error, "Unable to load pages");
   }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const user = await requireFirebaseAdmin(request);
+    const body = await request.json() as PagePayload & { id?: string };
+    if (!body.id || !body.title || !body.html) return Response.json({ error: "Page, title, and content are required." }, { status: 400 });
+    const status = ["published", "draft", "archived"].includes(body.status || "") ? body.status! : "draft";
+    const db = await getAdminFirestore();
+    const pageRef = db.collection("landingPages").doc(body.id);
+    if (!(await pageRef.get()).exists) return Response.json({ error: "Landing page not found." }, { status: 404 });
+    const now = new Date();
+    const safeHtml = sanitizeHtml(body.html);
+    const batch = db.batch();
+    batch.set(pageRef, { title: body.title.trim(), status, html: safeHtml, seoTitle: body.seo?.title || body.title.trim(), metaDescription: body.seo?.description || "", updatedBy: user.email || user.uid, updatedAt: now, ...(status === "published" ? { publishedAt: now } : {}) }, { merge: true });
+    batch.set(pageRef.collection("revisions").doc(), { pageId: body.id, html: safeHtml, changeType: status === "archived" ? "archive" : "edit", createdBy: user.email || user.uid, createdAt: now });
+    await batch.commit();
+    return Response.json({ page: { id: body.id, slug: body.id, status, updatedAt: now.toISOString() } });
+  } catch (error) { return errorResponse(error, "Unable to update the page"); }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    await requireFirebaseAdmin(request);
+    const id = new URL(request.url).searchParams.get("id");
+    if (!id) return Response.json({ error: "Page ID is required." }, { status: 400 });
+    const db = await getAdminFirestore();
+    const pageRef = db.collection("landingPages").doc(id);
+    if (!(await pageRef.get()).exists) return Response.json({ error: "Landing page not found." }, { status: 404 });
+    const revisions = await pageRef.collection("revisions").get();
+    const batch = db.batch();
+    revisions.docs.forEach((revision) => batch.delete(revision.ref));
+    batch.delete(pageRef);
+    await batch.commit();
+    return Response.json({ deleted: true, id });
+  } catch (error) { return errorResponse(error, "Unable to delete the page"); }
 }
 
 export async function POST(request: Request) {
