@@ -36,6 +36,7 @@ type Analytics = {
 type MediaAsset = { id: string; name: string; contentType: string; size: number; url: string; uploadedAt: string };
 type ApiPayload = { error?: string; setupUrl?: string; pages?: SavedPage[]; products?: Product[]; posts?: BlogPost[]; assets?: MediaAsset[]; analytics?: Analytics; [key: string]: unknown };
 type PlatformNotice = { message: string; setupUrl: string };
+type EditablePage = SavedPage & { html: string; seoTitle?: string; metaDescription?: string };
 
 const initialInput: GenerationInput = { name: "", type: "AI tool", category: "Artificial Intelligence", description: "", officialUrl: "", affiliateUrl: "", audience: "", features: "", pricing: "", pageType: "Full Product Review", tone: "Practical and credible" };
 const initialProduct = { ...initialInput, status: "active" };
@@ -64,6 +65,7 @@ export function AdminStudio({ user, onSignOut }: { user: { name: string; email: 
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [platformNotice, setPlatformNotice] = useState<PlatformNotice | null>(null);
+  const [editingPage, setEditingPage] = useState<EditablePage | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -207,6 +209,64 @@ export function AdminStudio({ user, onSignOut }: { user: { name: string; email: 
     setMessage("Link copied to the clipboard.");
   }
 
+  async function refreshPages() {
+    const response = await firebaseAuthorizedFetch("/api/pages");
+    const data = await response.json() as ApiPayload;
+    if (!response.ok) throw new Error(apiError(data, "Unable to load landing pages"));
+    setPages(data.pages ?? []);
+  }
+
+  async function editPage(page: SavedPage) {
+    setLoading(true); setMessage("");
+    try {
+      const response = await firebaseAuthorizedFetch(`/api/pages?id=${encodeURIComponent(page.id)}`);
+      const data = await response.json();
+      if (!response.ok) throw new Error(apiError(data, "Unable to open the page"));
+      setEditingPage(data.page); setView("pages");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to open the page."); }
+    finally { setLoading(false); }
+  }
+
+  async function updateExistingPage(status: "published" | "draft" | "archived") {
+    if (!editingPage) return;
+    setLoading(true); setMessage("");
+    try {
+      const response = await firebaseAuthorizedFetch("/api/pages", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: editingPage.id, title: editingPage.title, html: editingPage.html, status, seo: { title: editingPage.seoTitle, description: editingPage.metaDescription } }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(apiError(data, "Unable to update the page"));
+      await refreshPages(); setEditingPage(null);
+      setMessage(status === "archived" ? "Page archived and removed from the public website." : status === "published" ? "Page changes published successfully." : "Page saved as a private draft.");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to update the page."); }
+    finally { setLoading(false); }
+  }
+
+  async function deletePage(page: SavedPage) {
+    if (!window.confirm(`Permanently delete “${page.title}”? This cannot be undone.`)) return;
+    setLoading(true); setMessage("");
+    try {
+      const response = await firebaseAuthorizedFetch(`/api/pages?id=${encodeURIComponent(page.id)}`, { method: "DELETE" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(apiError(data, "Unable to delete the page"));
+      await refreshPages(); setMessage("Landing page permanently deleted.");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to delete the page."); }
+    finally { setLoading(false); }
+  }
+
+  async function archivePage(page: SavedPage) {
+    if (!window.confirm(`Archive “${page.title}”? It will immediately disappear from the public website.`)) return;
+    setLoading(true); setMessage("");
+    try {
+      const detailResponse = await firebaseAuthorizedFetch(`/api/pages?id=${encodeURIComponent(page.id)}`);
+      const detail = await detailResponse.json();
+      if (!detailResponse.ok) throw new Error(apiError(detail, "Unable to open the page"));
+      const response = await firebaseAuthorizedFetch("/api/pages", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: page.id, title: detail.page.title, html: detail.page.html, status: "archived", seo: { title: detail.page.seoTitle, description: detail.page.metaDescription } }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(apiError(data, "Unable to archive the page"));
+      await refreshPages(); setMessage("Page archived and removed from the public website.");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to archive the page."); }
+    finally { setLoading(false); }
+  }
+
   const publishedCount = pages.filter((page) => page.status === "published").length;
   const activeProducts = products.filter((product) => product.status === "active").length;
 
@@ -243,7 +303,7 @@ export function AdminStudio({ user, onSignOut }: { user: { name: string; email: 
           {generated && <section className="editor-panel admin-panel"><div className="editor-head"><div><p className="micro-label">Step 2 of 3</p><h2>{generated.title}</h2><span className="draft-badge">Draft · Fact-check required</span></div><div className="editor-actions"><button onClick={() => save("draft")} disabled={loading}>Save draft</button><button className="publish-button" onClick={() => save("published")} disabled={loading}>Publish page</button></div></div><div className="warning-strip">⚑ {generated.warnings.join(" ")}</div><div className="editor-tabs"><button className={editorTab === "visual" ? "active" : ""} onClick={() => setEditorTab("visual")}>Visual preview</button><button className={editorTab === "html" ? "active" : ""} onClick={() => setEditorTab("html")}>HTML editor</button><button className={editorTab === "seo" ? "active" : ""} onClick={() => setEditorTab("seo")}>SEO</button></div>{editorTab === "visual" && <div className="generated-preview" dangerouslySetInnerHTML={{ __html: html }} />}{editorTab === "html" && <textarea className="html-editor" value={html} onChange={(event) => setHtml(event.target.value)} spellCheck={false} />}{editorTab === "seo" && <div className="seo-editor"><label>SEO title<input value={generated.seo.title} onChange={(event) => setGenerated({ ...generated, seo: { ...generated.seo, title: event.target.value } })} /><small>{generated.seo.title.length}/60 recommended characters</small></label><label>Meta description<textarea rows={3} value={generated.seo.description} onChange={(event) => setGenerated({ ...generated, seo: { ...generated.seo, description: event.target.value } })} /><small>{generated.seo.description.length}/160 recommended characters</small></label><label>URL slug<input value={generated.slug} onChange={(event) => setGenerated({ ...generated, slug: event.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, "-") })} /></label><div className="search-preview"><small>fikrainaction.com › reviews › {generated.slug}</small><strong>{generated.seo.title}</strong><p>{generated.seo.description}</p></div></div>}{message && <div className="status-message">{message}</div>}</section>}
         </div>}
 
-        {view === "pages" && <div className="admin-view"><section className="admin-panel"><div className="panel-title"><div><p className="micro-label">Content inventory</p><h2>All landing pages</h2></div><button onClick={() => changeView("generator")}>+ New page</button></div><PageTable pages={pages} /></section></div>}
+        {view === "pages" && <div className="admin-view">{editingPage ? <section className="admin-panel page-visual-editor"><div className="editor-head"><div><p className="micro-label">Visual landing-page editor</p><input className="page-title-editor" value={editingPage.title} onChange={(event) => setEditingPage({ ...editingPage, title: event.target.value })} aria-label="Page title" /><span className={`draft-badge ${editingPage.status}`}>{editingPage.status}</span></div><div className="editor-actions"><button onClick={() => setEditingPage(null)}>Cancel</button><button onClick={() => updateExistingPage("draft")} disabled={loading}>Save draft</button><button onClick={() => updateExistingPage("archived")} disabled={loading}>Archive</button><button className="publish-button" onClick={() => updateExistingPage("published")} disabled={loading}>Publish changes</button></div></div><p className="visual-editor-help">Click anywhere in the page below and edit the text directly. Formatting and links are preserved.</p><div className="generated-preview visual-edit-surface" contentEditable suppressContentEditableWarning onInput={(event) => setEditingPage({ ...editingPage, html: event.currentTarget.innerHTML })} dangerouslySetInnerHTML={{ __html: editingPage.html }} />{message && <div className="status-message">{message}</div>}</section> : <section className="admin-panel"><div className="panel-title"><div><p className="micro-label">Content inventory</p><h2>All landing pages</h2></div><button onClick={() => changeView("generator")}>+ New page</button></div><PageTable pages={pages} onEdit={editPage} onArchive={archivePage} onDelete={deletePage} />{message && <div className="status-message">{message}</div>}</section>}</div>}
 
         {view === "products" && <div className="admin-view admin-management-layout"><section className="admin-panel"><div className="panel-title"><div><p className="micro-label">Firestore catalogue</p><h2>Add a product or service</h2></div><span className="required-note">* Required</span></div><div className="form-grid"><label>Name *<input value={productInput.name} onChange={(event) => updateProduct("name", event.target.value)} /></label><label>Type<select value={productInput.type} onChange={(event) => updateProduct("type", event.target.value)}><option>AI tool</option><option>SaaS</option><option>Software</option><option>Online service</option><option>Course</option><option>Digital product</option></select></label><label>Category *<input value={productInput.category} onChange={(event) => updateProduct("category", event.target.value)} /></label><label>Pricing<input value={productInput.pricing} onChange={(event) => updateProduct("pricing", event.target.value)} /></label><label className="full-field">Description *<textarea rows={3} value={productInput.description} onChange={(event) => updateProduct("description", event.target.value)} /></label><label>Official URL *<input type="url" value={productInput.officialUrl} onChange={(event) => updateProduct("officialUrl", event.target.value)} placeholder="https://" /></label><label>Affiliate URL *<input type="url" value={productInput.affiliateUrl} onChange={(event) => updateProduct("affiliateUrl", event.target.value)} placeholder="https://" /></label><label className="full-field">Target audience<input value={productInput.audience} onChange={(event) => updateProduct("audience", event.target.value)} /></label><label className="full-field">Features<textarea rows={3} value={productInput.features} onChange={(event) => updateProduct("features", event.target.value)} placeholder="One feature per line" /></label></div><button className="generate-button" onClick={saveProduct} disabled={loading}>{loading ? "Saving…" : "Save product to Firestore"}<span>→</span></button>{message && <div className="status-message">{message}</div>}</section><section className="admin-panel"><div className="panel-title"><div><p className="micro-label">{products.length} records</p><h2>Product catalogue</h2></div></div><ProductList products={products} onUse={useProduct} /></section></div>}
 
@@ -259,9 +319,9 @@ export function AdminStudio({ user, onSignOut }: { user: { name: string; email: 
   );
 }
 
-function PageTable({ pages }: { pages: SavedPage[] }) {
+function PageTable({ pages, onEdit, onArchive, onDelete }: { pages: SavedPage[]; onEdit?: (page: SavedPage) => void; onArchive?: (page: SavedPage) => void; onDelete?: (page: SavedPage) => void }) {
   if (!pages.length) return <div className="admin-empty"><strong>No generated pages yet.</strong><p>Your saved drafts and published pages will appear here.</p></div>;
-  return <div className="page-table"><div className="page-row page-row-head"><span>Page</span><span>Type</span><span>Status</span><span>Updated</span><span /></div>{pages.map((page) => <div className="page-row" key={page.id}><span><strong>{page.title}</strong><small>/reviews/{page.slug}</small></span><span>{page.pageType}</span><span><i className={`status-dot ${page.status}`} />{page.status}</span><span>{new Date(page.updatedAt).toLocaleDateString("en-GB")}</span><span>{page.status === "published" ? <Link href={`/reviews/${page.slug}`} target="_blank">View ↗</Link> : "Draft"}</span></div>)}</div>;
+  return <div className="page-table"><div className="page-row page-row-head"><span>Page</span><span>Type</span><span>Status</span><span>Updated</span><span>Actions</span></div>{pages.map((page) => <div className="page-row" key={page.id}><span><strong>{page.title}</strong><small>/reviews/{page.slug}</small></span><span>{page.pageType}</span><span><i className={`status-dot ${page.status}`} />{page.status}</span><span>{new Date(page.updatedAt).toLocaleDateString("en-GB")}</span><span className="page-actions">{page.status === "published" && <Link href={`/reviews/${page.slug}`} target="_blank">View</Link>}{onEdit && <button onClick={() => onEdit(page)}>Edit</button>}{onArchive && page.status !== "archived" && <button onClick={() => onArchive(page)}>Archive</button>}{onDelete && <button className="danger" onClick={() => onDelete(page)}>Delete</button>}</span></div>)}</div>;
 }
 
 function ProductList({ products, onUse }: { products: Product[]; onUse: (product: Product) => void }) {
