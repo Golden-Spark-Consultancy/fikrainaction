@@ -243,9 +243,9 @@ button, input { font: inherit; }
 .generated-platform-identity span { min-width: 0; display: flex; flex-direction: column; }
 .generated-platform-identity small { color: #7b8881; font-size: 9px; font-weight: 750; letter-spacing: .09em; text-transform: uppercase; }
 .generated-platform-identity strong { overflow: hidden; color: var(--ink); font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
-.generated-table-wrap, .generated-content table { width: 100%; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.generated-content table { display: block; margin: 22px 0 28px; border: 1px solid var(--line); border-spacing: 0; border-collapse: separate; border-radius: 13px; background: #fff; }
-.generated-content thead, .generated-content tbody { display: table; width: 100%; min-width: 640px; table-layout: fixed; }
+.generated-table-wrap { width: 100%; max-width: 100%; margin: 22px 0 28px; overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: #fff; box-shadow: 0 8px 24px rgba(20,34,27,.05); -webkit-overflow-scrolling: touch; }
+.generated-content table { width: 100%; min-width: 640px; margin: 0; border-spacing: 0; border-collapse: separate; background: #fff; table-layout: auto; }
+.generated-content > table { display: table; margin: 22px 0 28px; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
 .generated-content th, .generated-content td { padding: 14px 16px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; font-size: 14px; line-height: 1.55; }
 .generated-content th { background: #f3f6ef; color: var(--ink); font-weight: 800; }
 .generated-content tr:nth-child(even) td { background: #fafbf9; }
@@ -254,6 +254,14 @@ button, input { font: inherit; }
 .generated-card-grid, .generated-pros-cons { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; margin: 22px 0; }
 .generated-card-grid > article, .generated-pros-cons > * { padding: 22px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
 .generated-card-grid h3, .generated-pros-cons h3 { margin-top: 0; }
+.generated-card-grid > article { box-shadow: 0 8px 24px rgba(20,34,27,.045); }
+.generated-card-grid > article p, .generated-pros-cons p { margin-bottom: 0; }
+.generated-steps { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; padding: 0 !important; counter-reset: steps; list-style: none; }
+.generated-steps > li { position: relative; min-width: 0; margin: 0; padding: 54px 18px 20px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.generated-steps > li::before { position: absolute; top: 16px; left: 18px; display: grid; place-items: center; width: 27px; height: 27px; border-radius: 50%; background: var(--ink); color: var(--lime); counter-increment: steps; content: counter(steps); font-size: 12px; font-weight: 800; }
+.generated-visual-break { display: grid; grid-template-columns: minmax(170px,.38fr) minmax(0,1fr); gap: 24px; align-items: center; }
+.generated-visual-break > div:first-child p { margin-bottom: 8px; }
+.generated-visual-break .generated-image-grid { grid-template-columns: repeat(auto-fit, minmax(210px,1fr)); }
 .generated-video-grid { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
 .generated-video-grid article { min-width: 0; box-shadow: 0 8px 24px rgba(20,34,27,.05); }
 .generated-video-grid h3 { margin: 14px 14px 6px; font-size: 15px; line-height: 1.4; }
@@ -268,7 +276,9 @@ button, input { font: inherit; }
   .generated-content h1 { font-size: clamp(30px, 10vw, 42px); overflow-wrap: anywhere; }
   .generated-content > section:not(.generated-hero), .generated-runtime-videos { padding: 34px 0; }
   .generated-content p { font-size: 15px; line-height: 1.75; }
-  .generated-card-grid, .generated-pros-cons { grid-template-columns: 1fr; }
+  .generated-card-grid, .generated-pros-cons, .generated-steps, .generated-visual-break { grid-template-columns: 1fr; }
+  .generated-table-wrap { margin-inline: 0; border-radius: 10px; }
+  .generated-content table { min-width: 560px; }
   .generated-content th, .generated-content td { padding: 12px; font-size: 13px; }
   .generated-platform-identity { margin-bottom: 18px; }
   .generated-cta { width: 100%; text-align: center; }
