@@ -17,5 +17,15 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body className={`${geistSans.variable} ${geistMono.variable}`}><TagManagerNoScript /><Tracking /><SiteChrome>{children}</SiteChrome></body></html>;
+  return <html lang="en"><head>
+    {/* Google tag (gtag.js) */}
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHBQM8LF95" />
+    <script dangerouslySetInnerHTML={{ __html: `
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-YHBQM8LF95');
+    ` }} />
+  </head><body className={`${geistSans.variable} ${geistMono.variable}`}><TagManagerNoScript /><Tracking /><SiteChrome>{children}</SiteChrome></body></html>;
 }
