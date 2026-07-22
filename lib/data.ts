@@ -13,6 +13,8 @@ export type Tool = {
   affiliateUrl: string;
 };
 
+export type MainCategory = { name: string; slug: string; icon: string; color: string; description: string };
+
 export const tools: Tool[] = [
   { slug: "notion-ai", name: "Notion AI", logo: "N", logoClass: "logo-violet", category: "AI productivity", description: "A connected workspace for notes, projects, knowledge, and AI-assisted writing.", rating: 4.8, price: "From $10/month", badge: "Editor’s pick", highlights: ["Flexible connected workspace", "Strong writing and summaries", "Large template ecosystem"], bestFor: "Teams organizing knowledge and projects", affiliateUrl: "https://www.notion.so/product/ai" },
   { slug: "canva-magic-studio", name: "Canva Magic Studio", logo: "C", logoClass: "logo-coral", category: "Design & content", description: "Accessible AI-assisted design tools for social posts, presentations, and brand assets.", rating: 4.7, price: "Free plan available", badge: "Best for beginners", highlights: ["Very easy to learn", "Broad content formats", "Useful brand controls"], bestFor: "Creators and small businesses", affiliateUrl: "https://www.canva.com/magic-studio/" },
@@ -22,13 +24,14 @@ export const tools: Tool[] = [
   { slug: "grammarly", name: "Grammarly", logo: "G", logoClass: "logo-green", category: "Writing", description: "Writing assistance for clearer, more confident communication across apps.", rating: 4.4, price: "Free plan available", highlights: ["Works across many apps", "Fast tone and clarity suggestions"], bestFor: "Professionals and students", affiliateUrl: "https://www.grammarly.com/" },
 ];
 
-export const categories = [
-  { name: "AI tools", slug: "ai-tools", icon: "✦", color: "dot-violet" },
-  { name: "Productivity", slug: "productivity", icon: "✓", color: "dot-blue" },
-  { name: "Marketing", slug: "marketing", icon: "↗", color: "dot-coral" },
-  { name: "Design", slug: "design", icon: "◇", color: "dot-yellow" },
-  { name: "Automation", slug: "automation", icon: "⌁", color: "dot-green" },
+export const categories: MainCategory[] = [
+  { name: "AI Tools", slug: "ai-tools", icon: "✦", color: "dot-violet", description: "AI tools for content creation, automation, productivity, video, images, audio, research and business." },
+  { name: "Web Hosting", slug: "web-hosting", icon: "⌂", color: "dot-blue", description: "Website hosting, WordPress hosting, cloud hosting, VPS, domains and website-building services." },
+  { name: "Marketing Software", slug: "marketing-software", icon: "↗", color: "dot-coral", description: "SEO, email marketing, CRM, analytics, sales funnels, social media and advertising software." },
+  { name: "Creator Platforms", slug: "creator-platforms", icon: "◉", color: "dot-green", description: "Platforms for courses, communities, digital products, newsletters, memberships and creator monetization." },
 ];
+
+export const contentTypes = ["Review", "Comparison", "Tutorial", "Deal", "Alternatives", "Landing page"] as const;
 
 export const posts = [
   { slug: "choose-ai-tool", category: "Practical guide", readTime: "7 min", visual: "01", title: "How to choose an AI tool without wasting your budget", excerpt: "A simple framework for separating a useful investment from an impressive demo." },

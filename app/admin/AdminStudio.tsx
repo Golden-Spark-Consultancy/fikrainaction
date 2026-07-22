@@ -38,9 +38,9 @@ type ApiPayload = { error?: string; setupUrl?: string; pages?: SavedPage[]; prod
 type PlatformNotice = { message: string; setupUrl: string };
 type EditablePage = SavedPage & { html: string; seoTitle?: string; metaDescription?: string };
 
-const initialInput: GenerationInput = { name: "", type: "AI tool", category: "Artificial Intelligence", description: "", officialUrl: "", affiliateUrl: "", audience: "", features: "", pricing: "", pageType: "Full Product Review", tone: "Practical and credible" };
+const initialInput: GenerationInput = { name: "", type: "AI tool", category: "AI Tools", description: "", officialUrl: "", affiliateUrl: "", audience: "", features: "", pricing: "", pageType: "Landing page", tone: "Practical and credible" };
 const initialProduct = { ...initialInput, status: "active" };
-const initialPost = { title: "", category: "Practical guide", excerpt: "", content: "", status: "draft" };
+const initialPost = { title: "", category: "AI Tools", contentType: "Tutorial", excerpt: "", content: "", status: "draft" };
 const viewTitles: Record<AdminView, string> = { overview: "Overview", generator: "AI landing page generator", pages: "Landing pages", products: "Products", affiliates: "Affiliate links", blog: "Blog", media: "Firebase media library", analytics: "Affiliate analytics" };
 
 function destinationHost(value: string) {

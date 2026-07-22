@@ -47,14 +47,16 @@ export default function Home() {
           </div>
         </div>
         <div className="container category-strip">
-          <span>Explore by goal</span>
+          <span>Explore categories</span>
           <div>{categories.slice(0, 5).map((category) => (
-            <Link href={`/tools?category=${category.slug}`} key={category.slug}>
+            <Link href={`/category/${category.slug}`} key={category.slug}>
               <i className={`category-dot ${category.color}`} aria-hidden="true">{category.icon}</i>{category.name}
             </Link>
           ))}</div>
         </div>
       </section>
+
+      <section className="section container"><div className="section-heading"><div><p className="micro-label">Four focused areas</p><h2>Explore by category</h2></div></div><div className="category-card-grid">{categories.map((category) => <Link className="category-card" href={`/category/${category.slug}`} key={category.slug}><i className={`category-dot ${category.color}`}>{category.icon}</i><h3>{category.name}</h3><p>{category.description}</p><strong>Explore category →</strong></Link>)}</div></section>
 
       <section className="section container">
         <div className="section-heading">

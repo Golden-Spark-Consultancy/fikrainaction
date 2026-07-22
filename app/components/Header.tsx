@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { categories } from "../../lib/data";
 
 export function Header() {
   const [open, setOpen] = useState(false);
@@ -25,8 +26,8 @@ export function Header() {
           <span /><span /><span />
         </button>
         <nav className={open ? "nav-links open" : "nav-links"} aria-label="Main navigation">
-          <Link href="/tools">AI Tools</Link>
-          <Link href="/tools?category=software">Software</Link>
+          <div className="nav-dropdown"><button type="button">Categories <span>⌄</span></button><div>{categories.map((category) => <Link key={category.slug} href={`/category/${category.slug}`}>{category.name}</Link>)}</div></div>
+          {categories.map((category) => <Link className="category-direct" key={category.slug} href={`/category/${category.slug}`}>{category.name}</Link>)}
           <Link href="/comparisons">Comparisons</Link>
           <Link href="/tutorials">Tutorials</Link>
           <Link href="/deals">Deals</Link>

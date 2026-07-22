@@ -16,6 +16,10 @@ const routes = [
   "/privacy",
   "/terms",
   "/cookies",
+  "/category/ai-tools",
+  "/category/web-hosting",
+  "/category/marketing-software",
+  "/category/creator-platforms",
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {
