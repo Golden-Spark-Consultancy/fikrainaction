@@ -127,39 +127,41 @@ export default async function BlogArticlePage({
       <header className="article-hero blog-article-hero">
         <div className="container">
           <div className="blog-article-hero-inner">
-            <nav className="breadcrumb" aria-label="Breadcrumb">
+            <nav className="breadcrumb blog-article-breadcrumb" aria-label="Breadcrumb">
               <Link href={localizedPath(locale)}>{t("nav.home")}</Link>
               <span>/</span>
               <Link href={localizedPath(locale, "/blog")}>{t("nav.blog")}</Link>
-              <span>/</span>
-              <strong>{title}</strong>
             </nav>
-            <p className="micro-label">fikraInAction</p>
             <h1>{title}</h1>
             {excerpt ? <p className="blog-article-excerpt">{excerpt}</p> : null}
-            <p className="author-line">
-              <span>FA</span>
-              <span>
-                {t("common.readTime", { minutes: reading })}
-                {publishedAt
-                  ? ` · ${t("common.published")} ${publishedAt.slice(0, 10)}`
-                  : ""}
+            <div className="blog-article-meta">
+              <span className="blog-article-avatar" aria-hidden="true">
+                FA
               </span>
-            </p>
-            {altLocaleAvailable && (
-              <p className="blog-article-locale-link">
-                <Link
-                  href={localizedPath(
-                    locale === "ar" ? "en" : "ar",
-                    `/blog/${slug}`,
-                  )}
-                >
-                  {t("common.viewAvailableLocale")}
-                </Link>
-              </p>
-            )}
+              <div className="blog-article-meta-chips">
+                <span className="blog-article-chip">
+                  {t("common.readTime", { minutes: reading })}
+                </span>
+                {publishedAt ? (
+                  <span className="blog-article-chip">
+                    {t("common.published")} {publishedAt.slice(0, 10)}
+                  </span>
+                ) : null}
+                {altLocaleAvailable ? (
+                  <Link
+                    className="blog-article-chip blog-article-chip-link"
+                    href={localizedPath(
+                      locale === "ar" ? "en" : "ar",
+                      `/blog/${slug}`,
+                    )}
+                  >
+                    {t("common.viewAvailableLocale")}
+                  </Link>
+                ) : null}
+              </div>
+            </div>
             {isAffiliate && (
-              <p className="affiliate-notice">
+              <p className="affiliate-notice blog-article-affiliate">
                 <strong>{t("common.footer.affiliate")}:</strong>{" "}
                 {t("common.affiliateDisclosure")}
               </p>
