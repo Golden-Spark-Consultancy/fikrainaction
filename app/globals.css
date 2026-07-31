@@ -639,6 +639,19 @@ html[data-theme="dark"] .hero-copy h1, html.dark .hero-copy h1 { color: #f4f8fc;
   font-size: 15px;
   line-height: 1.55;
 }
+.blog-article-thumb {
+  margin: 0 0 14px;
+  overflow: hidden;
+  border: 1px solid var(--blog-border);
+  border-radius: 14px;
+  background: var(--blog-surface);
+}
+.blog-article-thumb img {
+  display: block;
+  width: 100%;
+  max-height: 360px;
+  object-fit: cover;
+}
 .blog-article-meta {
   display: flex;
   align-items: center;

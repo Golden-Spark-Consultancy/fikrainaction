@@ -78,6 +78,9 @@ export default async function BlogArticlePage({
   let isAffiliate = found?.shared.isAffiliateContent ?? false;
   let commentsEnabled = found?.shared.commentsEnabled !== false;
   let postId = found?.shared.id ?? slug;
+  const thumbnailUrl = found?.shared.thumbnailUrl || "";
+  const thumbnailAlt =
+    found?.locale.thumbnailAlt || found?.locale.title || title || "";
 
   if (!found) {
     const seed = seedPosts.find((p) => p.slug === slug);
@@ -139,6 +142,12 @@ export default async function BlogArticlePage({
             </nav>
             <h1>{title}</h1>
             {excerpt ? <p className="blog-article-excerpt">{excerpt}</p> : null}
+            {thumbnailUrl ? (
+              <figure className="blog-article-thumb">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={thumbnailUrl} alt={thumbnailAlt} loading="eager" />
+              </figure>
+            ) : null}
             <div className="blog-article-meta">
               <span className="blog-article-avatar" aria-hidden="true">
                 FA

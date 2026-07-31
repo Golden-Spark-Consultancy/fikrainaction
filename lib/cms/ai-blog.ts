@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { getAdminFirestore } from "../firebase/admin";
 import { findYouTubeVideos, readOfficialPage } from "../ai-landing-page";
-import { discoverProductImages } from "../image-discovery";
 import type {
   AffiliateLinkDoc,
   AiBatch,
@@ -13,6 +12,7 @@ import type {
   TagDoc,
 } from "../types/cms";
 import { LOCALES } from "../types/cms";
+import { resolveAiFeaturedImage } from "./ai-featured-image";
 import { COLLECTIONS } from "./collections";
 import { upsertPostLocale } from "./posts";
 import { slugify } from "./slug";
@@ -550,33 +550,23 @@ export async function generateBlogDraftForTopic(topic: string, options: Generate
       ? { href: outline.recommendedProductUrl, label: outline.recommendedProductName || outline.recommendedProductUrl }
       : null);
 
-  let missingFeaturedImage = true;
-  let thumbnailUrl: string | undefined;
-  const imageSourceUrl = officialUrl || outline.recommendedProductUrl;
-  if (imageSourceUrl) {
-    try {
-      const images = await discoverProductImages({
-        name: outline.recommendedProductName || cleanTopic,
-        type: "Article",
-        category: outline.categoryGuess || "General",
-        description: primaryOutline.excerpt,
-        officialUrl: imageSourceUrl,
-        affiliateUrl: imageSourceUrl,
-        audience: options.audience || "General readers",
-        features: "",
-        pricing: "",
-        pageType: "Blog post",
-      });
-      if (images[0]) {
-        thumbnailUrl = images[0].url;
-        missingFeaturedImage = false;
-      }
-    } catch {
-      // Featured image discovery is best-effort.
-    }
-  }
-  if (missingFeaturedImage) {
-    warnings.push("No featured image could be discovered automatically; add one from the Media Library before publishing.");
+  const featuredImage = await resolveAiFeaturedImage({
+    topic: cleanTopic,
+    title: primaryOutline.title || cleanTopic,
+    excerpt: primaryOutline.excerpt || "",
+    category: outline.categoryGuess,
+    productName: outline.recommendedProductName,
+    imageSourceUrl: officialUrl || outline.recommendedProductUrl,
+    uploadedBy: options.createdBy,
+  });
+  const thumbnailUrl = featuredImage.thumbnailUrl;
+  const thumbnailMediaId = featuredImage.thumbnailMediaId;
+  const missingFeaturedImage = !thumbnailUrl;
+  if (featuredImage.warning) warnings.push(featuredImage.warning);
+  if (missingFeaturedImage && !featuredImage.warning) {
+    warnings.push(
+      "No featured image could be discovered or generated automatically; add one from the Media Library before publishing.",
+    );
   }
 
   let youtube: { url: string; src: string } | undefined;
@@ -599,6 +589,7 @@ export async function generateBlogDraftForTopic(topic: string, options: Generate
     relatedPostIds: [],
     sources,
     thumbnailUrl,
+    thumbnailMediaId,
     aiGenerated: true,
     aiBatchId: options.batchId,
     aiWarnings: warnings,
@@ -630,6 +621,7 @@ export async function generateBlogDraftForTopic(topic: string, options: Generate
           excerpt: localeOutline.excerpt,
           content,
           seo: { title: localeOutline.seoTitle, description: localeOutline.seoDescription },
+          thumbnailAlt: featuredImage.thumbnailAlt || localeOutline.title || cleanTopic,
           status: "draft",
           publishedAt: null,
           scheduledAt: null,
@@ -651,6 +643,7 @@ export async function generateBlogDraftForTopic(topic: string, options: Generate
           excerpt: localeOutline.excerpt,
           content,
           seo: { title: localeOutline.seoTitle, description: localeOutline.seoDescription },
+          thumbnailAlt: featuredImage.thumbnailAlt || localeOutline.title || cleanTopic,
           status: "draft",
           publishedAt: null,
           scheduledAt: null,
