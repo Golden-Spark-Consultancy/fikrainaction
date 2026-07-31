@@ -77,13 +77,15 @@ export default async function BlogArticlePage({
       const otherPost = await getPostBySlug(other, slug).catch(() => null);
       if (otherPost) {
         return (
-          <main id="main-content" className="container" style={{ paddingBlock: 64 }}>
-            <h1>{t("common.translationUnavailable")}</h1>
-            <p>
-              <Link href={localizedPath(other, `/blog/${slug}`)}>
-                {t("common.viewAvailableLocale")}
-              </Link>
-            </p>
+          <main id="main-content" className="blog-article-page">
+            <div className="container blog-article-shell">
+              <h1>{t("common.translationUnavailable")}</h1>
+              <p>
+                <Link href={localizedPath(other, `/blog/${slug}`)}>
+                  {t("common.viewAvailableLocale")}
+                </Link>
+              </p>
+            </div>
           </main>
         );
       }
@@ -94,14 +96,16 @@ export default async function BlogArticlePage({
     html = `<p>${seed.excerpt}</p><p>This demonstration article is reserved for editorial expansion in the fikraInAction CMS.</p>`;
   } else {
     const other = locale === "ar" ? "en" : "ar";
-    altLocaleAvailable = Boolean(await getPostLocale(found.shared.id, other).catch(() => null));
+    altLocaleAvailable = Boolean(
+      await getPostLocale(found.shared.id, other).catch(() => null),
+    );
   }
 
   const headings = extractHeadingsFromHtml(html);
   const url = `${SITE_URL}${localizedPath(locale, `/blog/${slug}`)}`;
 
   return (
-    <main id="main-content">
+    <main id="main-content" className="blog-article-page">
       <JsonLd
         data={[
           blogPostingJsonLd({
@@ -119,58 +123,82 @@ export default async function BlogArticlePage({
         ]}
       />
       <ArticleExtras />
-      <header className="article-hero">
-        <div className="narrow">
-          <nav className="breadcrumb" aria-label="Breadcrumb">
-            <Link href={localizedPath(locale)}>{t("nav.home")}</Link>
-            <span>/</span>
-            <Link href={localizedPath(locale, "/blog")}>{t("nav.blog")}</Link>
-            <span>/</span>
-            <strong>{title}</strong>
-          </nav>
-          <p className="micro-label">fikraInAction</p>
-          <h1>{title}</h1>
-          <p>{excerpt}</p>
-          <p className="author-line">
-            <span>FA</span>
-            <span>
-              {t("common.readTime", { minutes: reading })}
-              {publishedAt ? ` · ${t("common.published")} ${publishedAt.slice(0, 10)}` : ""}
-            </span>
-          </p>
-          {altLocaleAvailable && (
-            <p>
-              <Link href={localizedPath(locale === "ar" ? "en" : "ar", `/blog/${slug}`)}>
-                {t("common.viewAvailableLocale")}
-              </Link>
+
+      <header className="article-hero blog-article-hero">
+        <div className="container">
+          <div className="blog-article-hero-inner">
+            <nav className="breadcrumb" aria-label="Breadcrumb">
+              <Link href={localizedPath(locale)}>{t("nav.home")}</Link>
+              <span>/</span>
+              <Link href={localizedPath(locale, "/blog")}>{t("nav.blog")}</Link>
+              <span>/</span>
+              <strong>{title}</strong>
+            </nav>
+            <p className="micro-label">fikraInAction</p>
+            <h1>{title}</h1>
+            {excerpt ? <p className="blog-article-excerpt">{excerpt}</p> : null}
+            <p className="author-line">
+              <span>FA</span>
+              <span>
+                {t("common.readTime", { minutes: reading })}
+                {publishedAt
+                  ? ` · ${t("common.published")} ${publishedAt.slice(0, 10)}`
+                  : ""}
+              </span>
             </p>
-          )}
-          {isAffiliate && (
-            <p className="affiliate-notice">
-              <strong>{t("common.footer.affiliate")}:</strong> {t("common.affiliateDisclosure")}
-            </p>
-          )}
+            {altLocaleAvailable && (
+              <p className="blog-article-locale-link">
+                <Link
+                  href={localizedPath(
+                    locale === "ar" ? "en" : "ar",
+                    `/blog/${slug}`,
+                  )}
+                >
+                  {t("common.viewAvailableLocale")}
+                </Link>
+              </p>
+            )}
+            {isAffiliate && (
+              <p className="affiliate-notice">
+                <strong>{t("common.footer.affiliate")}:</strong>{" "}
+                {t("common.affiliateDisclosure")}
+              </p>
+            )}
+          </div>
         </div>
       </header>
-      <div className="container article-layout">
-        <article className="article-body">
+
+      <div className="container blog-article-shell">
+        <div className="blog-article-layout">
           {headings.length > 0 && (
-            <nav className="policy-toc" aria-label={t("common.tableOfContents")}>
+            <aside className="blog-article-toc" aria-label={t("common.tableOfContents")}>
               <strong>{t("common.tableOfContents")}</strong>
-              {headings.map((h) => (
-                <a key={h.id} href={`#${h.id}`}>
-                  {h.text}
-                </a>
-              ))}
-            </nav>
+              <nav>
+                <ol className="blog-article-toc-list">
+                  {headings.map((h) => (
+                    <li
+                      key={h.id}
+                      className={`blog-article-toc-item level-${h.level}`}
+                    >
+                      <a href={`#${h.id}`}>{h.text}</a>
+                    </li>
+                  ))}
+                </ol>
+              </nav>
+            </aside>
           )}
-          <div dangerouslySetInnerHTML={{ __html: html }} />
-          <CommentSection
-            locale={locale}
-            postId={postId}
-            enabled={commentsEnabled}
-          />
-        </article>
+          <article className="article-body blog-article-content">
+            <div
+              className="blog-prose"
+              dangerouslySetInnerHTML={{ __html: html }}
+            />
+            <CommentSection
+              locale={locale}
+              postId={postId}
+              enabled={commentsEnabled}
+            />
+          </article>
+        </div>
       </div>
     </main>
   );
