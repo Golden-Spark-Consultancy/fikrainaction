@@ -60,16 +60,35 @@ function blankEditForm(asset: MediaAsset): EditForm {
   };
 }
 
+export type MediaSelectPayload = {
+  id: string;
+  url: string;
+  name: string;
+  alt?: string;
+  caption?: string;
+};
+
 export function MediaLibraryPanel({
   onSelect,
+  variant = "page",
+  imagesOnly = false,
+  selectLabel = "Insert",
+  autoSelectUploaded = false,
 }: {
-  onSelect?: (asset: { id: string; url: string; name: string; alt?: string }) => void;
+  onSelect?: (asset: MediaSelectPayload) => void;
+  /** Compact WordPress-style browser for modals */
+  variant?: "page" | "picker";
+  imagesOnly?: boolean;
+  selectLabel?: string;
+  /** After upload in picker mode, immediately select the first uploaded image */
+  autoSelectUploaded?: boolean;
 }) {
+  const isPicker = variant === "picker";
   const [assets, setAssets] = useState<MediaAsset[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<"all" | MediaKind>("all");
+  const [typeFilter, setTypeFilter] = useState<"all" | MediaKind>(imagesOnly ? "image" : "all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -78,7 +97,12 @@ export function MediaLibraryPanel({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditForm | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (imagesOnly) setTypeFilter("image");
+  }, [imagesOnly]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -109,6 +133,16 @@ export function MediaLibraryPanel({
     void load();
   }, [load]);
 
+  function toSelectPayload(asset: MediaAsset): MediaSelectPayload {
+    return {
+      id: asset.id,
+      url: asset.optimizedUrl || asset.url,
+      name: asset.name,
+      alt: asset.alt.en || asset.alt.ar,
+      caption: asset.caption.en || asset.caption.ar,
+    };
+  }
+
   async function uploadFiles(files: FileList | File[]) {
     const list = Array.from(files);
     if (!list.length) return;
@@ -116,13 +150,25 @@ export function MediaLibraryPanel({
     setMessage("");
     setError("");
     let failures = 0;
+    let lastUploaded: MediaAsset | null = null;
     for (const file of list) {
       try {
+        if (imagesOnly && !file.type.startsWith("image/")) {
+          failures += 1;
+          setError(`"${file.name}" is not an image.`);
+          continue;
+        }
         const form = new FormData();
         form.append("file", file);
         const res = await firebaseAuthorizedFetch("/api/media", { method: "POST", body: form });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || `Unable to upload ${file.name}.`);
+        if (data.asset) {
+          lastUploaded = {
+            ...(data.asset as MediaAsset),
+            kind: classifyKind(String(data.asset.contentType || file.type)),
+          };
+        }
       } catch (err) {
         failures += 1;
         setError(err instanceof Error ? err.message : `Unable to upload ${file.name}.`);
@@ -133,6 +179,18 @@ export function MediaLibraryPanel({
     else setMessage(`${list.length - failures} of ${list.length} file(s) uploaded.`);
     setPage(1);
     await load();
+    if (autoSelectUploaded && lastUploaded && onSelect && lastUploaded.kind === "image") {
+      onSelect(toSelectPayload(lastUploaded));
+    } else if (lastUploaded) {
+      setSelectedId(lastUploaded.id);
+    }
+  }
+
+  function classifyKind(contentType: string): MediaKind {
+    if (contentType.startsWith("image/")) return "image";
+    if (contentType.startsWith("video/")) return "video";
+    if (contentType === "application/pdf" || contentType === "text/plain") return "document";
+    return "other";
   }
 
   function onDrop(event: React.DragEvent<HTMLDivElement>) {
@@ -211,18 +269,22 @@ export function MediaLibraryPanel({
     }
   }
 
+  const selectedAsset = assets.find((asset) => asset.id === selectedId) || null;
+
   return (
-    <div className="admin-view">
-      <section className="admin-panel">
-        <div className="panel-title">
-          <div>
-            <p className="micro-label">Media Library</p>
-            <h2>Media</h2>
+    <div className={isPicker ? "media-picker" : "admin-view"}>
+      <section className={isPicker ? "media-picker-body" : "admin-panel"}>
+        {!isPicker ? (
+          <div className="panel-title">
+            <div>
+              <p className="micro-label">Media Library</p>
+              <h2>Media</h2>
+            </div>
           </div>
-        </div>
+        ) : null}
 
         <div
-          className={`media-dropzone${dragOver ? " is-active" : ""}`}
+          className={`media-dropzone${isPicker ? " media-dropzone-compact" : ""}${dragOver ? " is-active" : ""}`}
           onClick={() => fileInputRef.current?.click()}
           onDragOver={(event) => {
             event.preventDefault();
@@ -235,12 +297,16 @@ export function MediaLibraryPanel({
         >
           <span>{uploading ? "…" : "⇪"}</span>
           <strong>{uploading ? "Uploading…" : "Drop files here or click to upload"}</strong>
-          <small>Images, videos, PDF, or plain text · up to 20 MB each</small>
+          <small>
+            {imagesOnly
+              ? "Images only · up to 20 MB each"
+              : "Images, videos, PDF, or plain text · up to 20 MB each"}
+          </small>
           <input
             ref={fileInputRef}
             type="file"
             multiple
-            accept="image/*,video/*,application/pdf,text/plain"
+            accept={imagesOnly ? "image/*" : "image/*,video/*,application/pdf,text/plain"}
             onClick={(event) => event.stopPropagation()}
             onChange={(event) => {
               if (event.target.files?.length) void uploadFiles(event.target.files);
@@ -259,19 +325,21 @@ export function MediaLibraryPanel({
               setPage(1);
             }}
           />
-          <select
-            value={typeFilter}
-            onChange={(event) => {
-              setTypeFilter(event.target.value as "all" | MediaKind);
-              setPage(1);
-            }}
-          >
-            {Object.entries(TYPE_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
+          {!imagesOnly ? (
+            <select
+              value={typeFilter}
+              onChange={(event) => {
+                setTypeFilter(event.target.value as "all" | MediaKind);
+                setPage(1);
+              }}
+            >
+              {Object.entries(TYPE_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          ) : null}
         </div>
 
         {loading && (
@@ -285,55 +353,90 @@ export function MediaLibraryPanel({
         {!loading && !error && !assets.length && (
           <div className="admin-empty">
             <strong>No media files match these filters.</strong>
-            <p>Upload an image, video, PDF, or text file to get started.</p>
+            <p>Upload {imagesOnly ? "an image" : "a file"} to get started.</p>
           </div>
         )}
 
         {!loading && assets.length > 0 && (
-          <div className="media-grid">
-            {assets.map((asset) => (
-              <article key={asset.id}>
-                {asset.kind === "image" ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={asset.thumbUrl || asset.optimizedUrl || asset.url} alt={asset.alt.en || asset.alt.ar || asset.name} loading="lazy" />
-                ) : (
-                  <div className="media-video-tile">{asset.kind.toUpperCase()}</div>
-                )}
-                <div>
-                  <strong title={asset.name}>{asset.name}</strong>
-                  <small>
-                    {formatBytes(asset.size)} · {asset.kind}
-                    {asset.width && asset.height ? ` · ${asset.width}×${asset.height}` : ""}
-                  </small>
-                  <div className="page-actions" style={{ gridColumn: "1 / -1" }}>
-                    {onSelect && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          onSelect({
-                            id: asset.id,
-                            url: asset.optimizedUrl || asset.url,
-                            name: asset.name,
-                            alt: asset.alt.en || asset.alt.ar,
-                          })
-                        }
-                      >
-                        Insert
-                      </button>
-                    )}
-                    <button type="button" onClick={() => startEdit(asset)}>
-                      Edit
-                    </button>
-                    <button type="button" onClick={() => void copyUrl(asset)}>
-                      Copy URL
-                    </button>
-                    <button type="button" className="danger" onClick={() => void deleteAsset(asset)}>
-                      Delete
-                    </button>
+          <div className={`media-grid${isPicker ? " media-grid-picker" : ""}`}>
+            {assets.map((asset) => {
+              const selectable = Boolean(onSelect) && (!imagesOnly || asset.kind === "image");
+              return (
+                <article
+                  key={asset.id}
+                  className={`${selectedId === asset.id ? "is-selected" : ""}${selectable ? " is-selectable" : ""}`}
+                  onClick={() => {
+                    if (!selectable) return;
+                    setSelectedId(asset.id);
+                  }}
+                  onDoubleClick={() => {
+                    if (!selectable || !onSelect) return;
+                    onSelect(toSelectPayload(asset));
+                  }}
+                >
+                  {asset.kind === "image" ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={asset.thumbUrl || asset.optimizedUrl || asset.url}
+                      alt={asset.alt.en || asset.alt.ar || asset.name}
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="media-video-tile">{asset.kind.toUpperCase()}</div>
+                  )}
+                  <div>
+                    <strong title={asset.name}>{asset.name}</strong>
+                    <small>
+                      {formatBytes(asset.size)} · {asset.kind}
+                      {asset.width && asset.height ? ` · ${asset.width}×${asset.height}` : ""}
+                    </small>
+                    {!isPicker ? (
+                      <div className="page-actions" style={{ gridColumn: "1 / -1" }}>
+                        {onSelect && selectable ? (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onSelect(toSelectPayload(asset));
+                            }}
+                          >
+                            {selectLabel}
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            startEdit(asset);
+                          }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void copyUrl(asset);
+                          }}
+                        >
+                          Copy URL
+                        </button>
+                        <button
+                          type="button"
+                          className="danger"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void deleteAsset(asset);
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
-                </div>
-              </article>
-            ))}
+                </article>
+              );
+            })}
           </div>
         )}
 
@@ -352,9 +455,30 @@ export function MediaLibraryPanel({
         )}
 
         {message && <div className="status-message">{message}</div>}
+
+        {isPicker && onSelect ? (
+          <div className="media-picker-footer">
+            <small>
+              {selectedAsset
+                ? `Selected: ${selectedAsset.name}`
+                : "Select an image, or double-click to use it immediately."}
+            </small>
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={!selectedAsset || (imagesOnly && selectedAsset.kind !== "image")}
+              onClick={() => {
+                if (!selectedAsset) return;
+                onSelect(toSelectPayload(selectedAsset));
+              }}
+            >
+              {selectLabel}
+            </button>
+          </div>
+        ) : null}
       </section>
 
-      {editingId && editForm && (
+      {!isPicker && editingId && editForm && (
         <section className="admin-panel">
           <div className="panel-title">
             <div>

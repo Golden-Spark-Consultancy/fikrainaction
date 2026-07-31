@@ -25,8 +25,8 @@ type Props = {
   placeholder?: string;
   dir?: "rtl" | "ltr";
   locale?: "ar" | "en";
-  /** Optional callback to open a media picker instead of prompting for a URL. */
-  onRequestMedia?: () => void;
+  /** Opens a media picker; call `insert` with the chosen image URL/alt. */
+  onRequestMedia?: (insert: (src: string, alt?: string) => void) => void;
 };
 
 const lowlight = createLowlight(common);
@@ -207,7 +207,7 @@ function Toolbar({
   editor: Editor;
   fullscreen: boolean;
   onToggleFullscreen: () => void;
-  onRequestMedia?: () => void;
+  onRequestMedia?: (insert: (src: string, alt?: string) => void) => void;
 }) {
   function insertLink() {
     const previousHref = (editor.getAttributes("link").href as string | undefined) || "";
@@ -232,7 +232,10 @@ function Toolbar({
 
   function insertImage() {
     if (onRequestMedia) {
-      onRequestMedia();
+      onRequestMedia((src, alt) => {
+        if (!src?.trim()) return;
+        editor.chain().focus().setImage({ src: src.trim(), alt: alt || "" }).run();
+      });
       return;
     }
     const src = window.prompt("Image URL");

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { firebaseAuthorizedFetch } from "../../../lib/firebase/api";
 import type { CategoryDoc, ContentStatus, Locale } from "../../../lib/types/cms";
 import { RichTextEditor } from "../../components/RichTextEditor";
+import { MediaBrowserModal } from "../components/MediaBrowserModal";
 
 type PostListItem = {
   id: string;
@@ -235,6 +236,8 @@ export function PostsPanel({
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [mediaBrowser, setMediaBrowser] = useState<"thumbnail" | "content" | null>(null);
+  const contentImageInsertRef = useRef<((src: string, alt?: string) => void) | null>(null);
   const editorRef = useRef<EditorState | null>(null);
   const openedInitialRef = useRef(false);
   editorRef.current = editor;
@@ -880,6 +883,10 @@ export function PostsPanel({
                 onChange={(json) =>
                   setEditor((current) => (current ? { ...current, content: json, dirty: true } : current))
                 }
+                onRequestMedia={(insert) => {
+                  contentImageInsertRef.current = insert;
+                  setMediaBrowser("content");
+                }}
               />
             </section>
 
@@ -993,48 +1000,64 @@ export function PostsPanel({
 
             <section className="cms-card">
               <div className="cms-card-head">
-                <h3>Media</h3>
-                <small>Featured image</small>
+                <h3>Featured image</h3>
+                <small>From media library</small>
               </div>
               {editor.thumbnailUrl ? (
                 <div className="post-thumb-preview">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={editor.thumbnailUrl} alt={editor.thumbnailAlt || "Thumbnail preview"} />
                 </div>
-              ) : null}
-              <div className="form-grid form-grid-stack">
-                <label>
-                  Thumbnail URL
-                  <input
-                    value={editor.thumbnailUrl}
-                    onChange={(e) => setEditor({ ...editor, thumbnailUrl: e.target.value, dirty: true })}
-                    placeholder="https://…"
-                  />
-                </label>
-                <label>
-                  Thumbnail media ID
-                  <input
-                    value={editor.thumbnailMediaId}
-                    onChange={(e) =>
-                      setEditor({ ...editor, thumbnailMediaId: e.target.value, dirty: true })
+              ) : (
+                <p className="cms-empty">No featured image selected yet.</p>
+              )}
+              <div className="post-thumb-actions">
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => setMediaBrowser("thumbnail")}
+                >
+                  {editor.thumbnailUrl ? "Replace image" : "Set featured image"}
+                </button>
+                {editor.thumbnailUrl ? (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() =>
+                      setEditor({
+                        ...editor,
+                        thumbnailUrl: "",
+                        thumbnailMediaId: "",
+                        thumbnailAlt: "",
+                        caption: "",
+                        dirty: true,
+                      })
                     }
-                  />
-                </label>
-                <label>
-                  Alt text
-                  <input
-                    value={editor.thumbnailAlt}
-                    onChange={(e) => setEditor({ ...editor, thumbnailAlt: e.target.value, dirty: true })}
-                  />
-                </label>
-                <label>
-                  Caption
-                  <input
-                    value={editor.caption}
-                    onChange={(e) => setEditor({ ...editor, caption: e.target.value, dirty: true })}
-                  />
-                </label>
+                  >
+                    Remove
+                  </button>
+                ) : null}
               </div>
+              {editor.thumbnailUrl ? (
+                <div className="form-grid form-grid-stack" style={{ marginTop: 12 }}>
+                  <label>
+                    Alt text
+                    <input
+                      value={editor.thumbnailAlt}
+                      onChange={(e) =>
+                        setEditor({ ...editor, thumbnailAlt: e.target.value, dirty: true })
+                      }
+                    />
+                  </label>
+                  <label>
+                    Caption
+                    <input
+                      value={editor.caption}
+                      onChange={(e) => setEditor({ ...editor, caption: e.target.value, dirty: true })}
+                    />
+                  </label>
+                </div>
+              ) : null}
             </section>
 
             <section className="cms-card">
@@ -1157,6 +1180,36 @@ export function PostsPanel({
             ) : null}
           </aside>
         </div>
+
+        <MediaBrowserModal
+          open={mediaBrowser !== null}
+          title={mediaBrowser === "content" ? "Insert image" : "Set featured image"}
+          imagesOnly
+          selectLabel={mediaBrowser === "content" ? "Insert into post" : "Use as featured image"}
+          onClose={() => {
+            setMediaBrowser(null);
+            contentImageInsertRef.current = null;
+          }}
+          onSelect={(asset) => {
+            if (mediaBrowser === "content") {
+              contentImageInsertRef.current?.(asset.url, asset.alt || asset.name);
+              contentImageInsertRef.current = null;
+              return;
+            }
+            setEditor((current) =>
+              current
+                ? {
+                    ...current,
+                    thumbnailMediaId: asset.id,
+                    thumbnailUrl: asset.url,
+                    thumbnailAlt: asset.alt || current.thumbnailAlt || asset.name,
+                    caption: asset.caption || current.caption,
+                    dirty: true,
+                  }
+                : current,
+            );
+          }}
+        />
       </div>
     );
   }

@@ -1832,6 +1832,113 @@ html[dir="rtl"] .home-banner-shade {
   max-height: 160px;
   object-fit: cover;
 }
+.post-thumb-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* WordPress-style media browser modal */
+.media-browser-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+.media-browser-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(0, 19, 41, 0.55);
+  cursor: pointer;
+}
+.media-browser-panel {
+  position: relative;
+  z-index: 1;
+  width: min(980px, 100%);
+  max-height: min(88vh, 860px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 28px 80px rgba(0, 19, 41, 0.28);
+}
+.media-browser-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid #e8eef4;
+  background: #f8fafc;
+}
+.media-browser-head h2 {
+  margin: 4px 0 0;
+  font-size: 18px;
+  letter-spacing: -.03em;
+}
+.media-picker {
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.media-picker-body {
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 18px 0;
+  overflow: hidden;
+}
+.media-dropzone-compact {
+  min-height: 96px;
+  padding: 16px;
+  gap: 4px;
+}
+.media-dropzone-compact > span {
+  width: 36px;
+  height: 36px;
+  font-size: 16px;
+}
+.media-grid-picker {
+  flex: 1;
+  min-height: 220px;
+  overflow: auto;
+  padding-bottom: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+}
+.media-grid-picker article {
+  cursor: pointer;
+  transition: box-shadow .15s ease, border-color .15s ease;
+}
+.media-grid-picker article.is-selectable:hover {
+  box-shadow: 0 0 0 2px rgba(56, 182, 255, 0.35);
+}
+.media-grid-picker article.is-selected {
+  box-shadow: 0 0 0 3px rgba(56, 182, 255, 0.55);
+  border-color: #5aa8e8;
+}
+.media-picker-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin: 0 -18px;
+  padding: 12px 18px;
+  border-top: 1px solid #e8eef4;
+  background: #f8fafc;
+}
+.media-picker-footer small {
+  color: #6f7f8c;
+  font-size: 11px;
+}
 .post-editor-page .category-picker {
   max-height: 320px;
   overflow: auto;
