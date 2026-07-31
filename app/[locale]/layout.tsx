@@ -29,7 +29,17 @@ export default async function LocaleLayout({
   ]);
 
   return (
-    <div data-locale={locale} dir={localeDirection(locale)} lang={locale}>
+    <div
+      data-locale={locale}
+      dir={localeDirection(locale)}
+      lang={locale}
+      style={{
+        fontFamily:
+          locale === "ar"
+            ? "var(--font-cairo), Cairo, sans-serif"
+            : "var(--font-inter), Inter, sans-serif",
+      }}
+    >
       <LocaleAttributes locale={locale} />
       <SiteChrome locale={locale} headerMenu={headerMenu} footerMenu={footerMenu}>
         {children}

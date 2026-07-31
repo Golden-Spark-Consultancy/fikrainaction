@@ -37,16 +37,20 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "fikraInAction",
   },
-  icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
+  icons: {
+    icon: [{ url: "/favicon.png", type: "image/png" }, { url: "/favicon.svg" }],
+    shortcut: "/favicon.png",
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="ar" dir="rtl" suppressHydrationWarning>
+    <html lang="ar" dir="rtl" data-locale="ar" suppressHydrationWarning>
       <body
-        className={`${cairo.variable} ${inter.variable} ${jetbrains.variable}`}
+        className={`${cairo.variable} ${inter.variable} ${jetbrains.variable} ${cairo.className}`}
       >
         <TagManagerNoScript />
         <Tracking />

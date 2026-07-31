@@ -22,8 +22,8 @@ export function Footer({ locale, menu }: { locale: Locale; menu?: MenuDoc }) {
               className="footer-logo"
               src="/fikra-in-action-logo.png"
               alt="fikraInAction"
-              width={1170}
-              height={607}
+              width={1024}
+              height={1024}
               unoptimized
             />
           </Link>
