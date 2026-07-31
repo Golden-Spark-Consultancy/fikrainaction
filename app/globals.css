@@ -536,24 +536,34 @@ a { color: inherit; text-decoration: none; }
 .media-upload-button { width: 100%; margin-top: 10px; border: 0; border-radius: 8px; padding: 12px; background: var(--ink); color: white; font-size: 10px; font-weight: 700; cursor: pointer; }.media-upload-button:disabled { opacity: .45; cursor: not-allowed; }
 .media-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
 .media-grid article { overflow: hidden; border: 1px solid #dfe5e0; border-radius: 11px; background: #fafbf9; display: flex; flex-direction: column; }
-.media-grid img,
-.media-video-tile {
+/* Locked 16:9 preview frame — image fills without stretching */
+.media-thumb {
+  position: relative;
+  display: block;
   width: 100%;
+  flex: 0 0 auto;
   aspect-ratio: 16 / 9;
-  height: auto;
-  object-fit: contain;
+  overflow: hidden;
+  background: #0b1421;
+}
+.media-thumb img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
   object-position: center;
   display: block;
-  background: #0b1421;
+}
+.media-thumb-tile,
+.media-video-tile {
+  display: grid;
+  place-items: center;
   color: var(--lime);
   font-size: 10px;
   font-weight: 800;
   letter-spacing: .15em;
-}
-.media-video-tile {
-  display: grid;
-  place-items: center;
-  min-height: 0;
 }
 .media-grid article > div:last-child { display: grid; grid-template-columns: 1fr auto; gap: 5px 10px; align-items: center; padding: 11px; }
 .media-grid strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; }
@@ -1937,8 +1947,9 @@ html[dir="rtl"] .home-banner-shade {
   min-height: 220px;
   overflow: auto;
   padding-bottom: 8px;
-  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
-  gap: 12px;
+  /* Wider tiles so 16:9 previews read clearly */
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
   align-content: start;
 }
 .media-grid-picker article {
@@ -1946,19 +1957,8 @@ html[dir="rtl"] .home-banner-shade {
   transition: box-shadow .15s ease, border-color .15s ease;
   background: #fff;
 }
-.media-grid-picker img,
-.media-grid-picker .media-video-tile {
-  aspect-ratio: 16 / 9;
-  height: auto;
-  object-fit: contain;
-  background:
-    linear-gradient(45deg, #e8eef4 25%, transparent 25%),
-    linear-gradient(-45deg, #e8eef4 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #e8eef4 75%),
-    linear-gradient(-45deg, transparent 75%, #e8eef4 75%);
-  background-size: 12px 12px;
-  background-position: 0 0, 0 6px, 6px -6px, -6px 0;
-  background-color: #f3f6f9;
+.media-grid-picker .media-thumb {
+  border-bottom: 1px solid #e8eef4;
 }
 .media-grid-picker article > div:last-child {
   padding: 8px 10px;

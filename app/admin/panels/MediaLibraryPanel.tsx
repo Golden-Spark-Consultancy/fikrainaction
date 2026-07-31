@@ -375,14 +375,18 @@ export function MediaLibraryPanel({
                   }}
                 >
                   {asset.kind === "image" ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={asset.thumbUrl || asset.optimizedUrl || asset.url}
-                      alt={asset.alt.en || asset.alt.ar || asset.name}
-                      loading="lazy"
-                    />
+                    <span className="media-thumb">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={asset.optimizedUrl || asset.url || asset.thumbUrl}
+                        alt={asset.alt.en || asset.alt.ar || asset.name}
+                        loading="lazy"
+                      />
+                    </span>
                   ) : (
-                    <div className="media-video-tile">{asset.kind.toUpperCase()}</div>
+                    <span className="media-thumb media-thumb-tile">
+                      {asset.kind.toUpperCase()}
+                    </span>
                   )}
                   <div>
                     <strong title={asset.name}>{asset.name}</strong>
