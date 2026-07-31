@@ -179,16 +179,27 @@ export default async function BlogArticlePage({
 
       <header className="article-hero blog-article-hero">
         <div className="container">
-          <div className="blog-article-hero-inner">
-            <Breadcrumbs items={crumbItems} />
+          <Breadcrumbs items={crumbItems} />
+        </div>
+
+        <div
+          className={`blog-article-cover${thumbnailUrl ? " has-image" : ""}`}
+        >
+          {thumbnailUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              className="blog-article-cover-media"
+              src={thumbnailUrl}
+              alt={thumbnailAlt}
+              loading="eager"
+            />
+          ) : (
+            <span className="blog-article-cover-fallback" aria-hidden="true" />
+          )}
+          <span className="blog-article-cover-shade" aria-hidden="true" />
+          <div className="container blog-article-cover-copy">
             <h1>{title}</h1>
             {excerpt ? <p className="blog-article-excerpt">{excerpt}</p> : null}
-            {thumbnailUrl ? (
-              <figure className="blog-article-thumb">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={thumbnailUrl} alt={thumbnailAlt} loading="eager" />
-              </figure>
-            ) : null}
             <div className="blog-article-meta">
               <span className="blog-article-avatar" aria-hidden="true">
                 FA
@@ -199,14 +210,17 @@ export default async function BlogArticlePage({
                 </span>
               </div>
             </div>
-            {isAffiliate && (
-              <p className="affiliate-notice blog-article-affiliate">
-                <strong>{t("common.footer.affiliate")}:</strong>{" "}
-                {t("common.affiliateDisclosure")}
-              </p>
-            )}
           </div>
         </div>
+
+        {isAffiliate ? (
+          <div className="container">
+            <p className="affiliate-notice blog-article-affiliate">
+              <strong>{t("common.footer.affiliate")}:</strong>{" "}
+              {t("common.affiliateDisclosure")}
+            </p>
+          </div>
+        ) : null}
       </header>
 
       <div className="container blog-article-shell">
