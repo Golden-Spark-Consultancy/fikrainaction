@@ -941,7 +941,7 @@ export function PostsPanel({
           </div>
 
           <aside className="post-editor-aside">
-            <section className="cms-card cms-card-sticky">
+            <section className="cms-card">
               <div className="cms-card-head">
                 <h3>Categories</h3>
                 <small>{editor.categoryIds.length} selected</small>
