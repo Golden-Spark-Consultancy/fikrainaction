@@ -76,17 +76,24 @@ export function CategoriesPanel() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (syncNav = false) => {
     setLoading(true);
     try {
-      const res = await firebaseAuthorizedFetch("/api/cms/categories?all=1");
+      const path = syncNav
+        ? "/api/cms/categories?all=1&syncNav=1"
+        : "/api/cms/categories?all=1";
+      const res = await firebaseAuthorizedFetch(path);
       const data = await res.json();
       if (!res.ok) {
         setMessage(data.error || "Unable to load categories.");
         return;
       }
       setCategories(data.categories || []);
-      setMessage("");
+      setMessage(
+        data.synced
+          ? "Navbar categories synced. The public menu now mirrors this tree."
+          : "",
+      );
     } catch {
       setMessage("Unable to load categories.");
     } finally {
@@ -95,7 +102,8 @@ export function CategoriesPanel() {
   }, []);
 
   useEffect(() => {
-    void load();
+    // First open: ensure navbar taxonomy exists in Firestore.
+    void load(true);
   }, [load]);
 
   const roots = useMemo(
@@ -195,13 +203,19 @@ export function CategoriesPanel() {
           <p className="micro-label">Taxonomy</p>
           <h2>Categories & subcategories</h2>
         </div>
-        <button type="button" onClick={() => startCreate()}>
-          + New category
-        </button>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button type="button" onClick={() => void load(true)}>
+            Sync navbar categories
+          </button>
+          <button type="button" onClick={() => startCreate()}>
+            + New category
+          </button>
+        </div>
       </div>
       <p className="admin-section-intro">
-        Manage top-level categories and nested subcategories. Toggle navbar visibility per item, then assign
-        them on each post in the Posts editor.
+        The public navbar shows only categories with <strong>Show in navbar</strong> enabled, nested under
+        their parent. Sync creates the current navbar tree (AI & Automation, Software, Hardware, Guides &
+        Reviews) so the menu always reflects this screen.
       </p>
       {message ? <p className="admin-inline-message">{message}</p> : null}
 

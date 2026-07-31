@@ -14,18 +14,22 @@ function init() {
   initFirebaseAdmin();
 }
 
+/** Mirrors lib/cms/nav-taxonomy.ts — navbar is driven by these CMS categories. */
 const categories = [
-  { id: "artificial-intelligence", ar: "الذكاء الاصطناعي", en: "Artificial Intelligence", parentId: null, icon: "ai", showInNav: true },
-  { id: "automation", ar: "الأتمتة", en: "Automation", parentId: "artificial-intelligence", icon: "automation", showInNav: true },
-  { id: "software", ar: "البرمجيات", en: "Software", parentId: null, icon: "software", showInNav: true },
-  { id: "programming", ar: "البرمجة", en: "Programming", parentId: "software", icon: "programming", showInNav: true },
-  { id: "hardware", ar: "الأجهزة", en: "Hardware", parentId: null, icon: "hardware", showInNav: true },
-  { id: "arduino", ar: "أردوينو", en: "Arduino", parentId: "hardware", icon: "arduino", showInNav: true },
-  { id: "raspberry-pi", ar: "راسبيري باي", en: "Raspberry Pi", parentId: "hardware", icon: "raspberry-pi", showInNav: true },
-  { id: "esp32", ar: "ESP32", en: "ESP32", parentId: "hardware", icon: "esp32", showInNav: true },
-  { id: "tutorials", ar: "الشروحات", en: "Tutorials", parentId: null, icon: "tutorials", showInNav: true },
-  { id: "reviews", ar: "المراجعات", en: "Reviews", parentId: "tutorials", icon: "reviews", showInNav: true },
-  { id: "cybersecurity", ar: "الأمن السيبراني", en: "Cybersecurity", parentId: null, icon: "folder", showInNav: false },
+  { id: "ai-automation", ar: "الذكاء والأتمتة", en: "AI & Automation", parentId: null, icon: "ai", showInNav: true },
+  { id: "artificial-intelligence", ar: "الذكاء الاصطناعي", en: "Artificial Intelligence", parentId: "ai-automation", icon: "ai", showInNav: true },
+  { id: "automation", ar: "الأتمتة", en: "Automation", parentId: "ai-automation", icon: "automation", showInNav: true },
+  { id: "software-group", ar: "البرمجيات", en: "Software", parentId: null, icon: "software", showInNav: true },
+  { id: "software", ar: "البرمجيات", en: "Software", parentId: "software-group", icon: "software", showInNav: true },
+  { id: "programming", ar: "البرمجة", en: "Programming", parentId: "software-group", icon: "programming", showInNav: true },
+  { id: "hardware-group", ar: "الأجهزة", en: "Hardware", parentId: null, icon: "hardware", showInNav: true },
+  { id: "hardware", ar: "الأجهزة", en: "Hardware", parentId: "hardware-group", icon: "hardware", showInNav: true },
+  { id: "arduino", ar: "أردوينو", en: "Arduino", parentId: "hardware-group", icon: "arduino", showInNav: true },
+  { id: "raspberry-pi", ar: "راسبيري باي", en: "Raspberry Pi", parentId: "hardware-group", icon: "raspberry-pi", showInNav: true },
+  { id: "esp32", ar: "ESP32", en: "ESP32", parentId: "hardware-group", icon: "esp32", showInNav: true },
+  { id: "guides", ar: "شروحات ومراجعات", en: "Guides & Reviews", parentId: null, icon: "guides", showInNav: true },
+  { id: "tutorials", ar: "شروحات", en: "Tutorials", parentId: "guides", icon: "tutorials", showInNav: true },
+  { id: "reviews", ar: "مراجعات", en: "Reviews", parentId: "guides", icon: "reviews", showInNav: true },
 ];
 
 const demoContent = {
@@ -45,18 +49,17 @@ const demoContent = {
 async function main() {
   init();
   const db = getFirestore();
-  const existingCats = await db.collection("categories").limit(1).get();
-  if (!existingCats.empty) {
-    console.log("Categories already present — skipping category seed.");
-  } else {
-    console.log(`${dryRun ? "[dry-run] " : ""}Seeding categories…`);
-    if (!dryRun) {
-      const batch = db.batch();
-      categories.forEach((cat, index) => {
-        batch.set(db.collection("categories").doc(cat.id), {
+  console.log(`${dryRun ? "[dry-run] " : ""}Syncing navbar categories (merge)…`);
+  if (!dryRun) {
+    const batch = db.batch();
+    const now = new Date().toISOString();
+    categories.forEach((cat, index) => {
+      batch.set(
+        db.collection("categories").doc(cat.id),
+        {
           id: cat.id,
           parentId: cat.parentId,
-          order: index,
+          order: cat.order ?? index * 10,
           showInNav: cat.showInNav !== false,
           icon: cat.icon || cat.id,
           enabled: true,
@@ -64,13 +67,12 @@ async function main() {
             ar: { name: cat.ar, slug: cat.id, description: cat.ar },
             en: { name: cat.en, slug: cat.id, description: cat.en },
           },
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          demo: true,
-        });
-      });
-      await batch.commit();
-    }
+          updatedAt: now,
+        },
+        { merge: true },
+      );
+    });
+    await batch.commit();
   }
 
   const existingDemo = await db.collection("posts").doc("demo-code-highlighting").get();

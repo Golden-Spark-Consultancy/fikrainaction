@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import {
   deleteCategory,
+  ensureDefaultNavCategories,
   listAllCategoriesAdmin,
   listCategories,
   upsertCategory,
@@ -27,8 +28,13 @@ export async function GET(request: Request) {
     await requireFirebaseAdmin(request);
     const url = new URL(request.url);
     const all = url.searchParams.get("all") === "1";
+    const syncNav = url.searchParams.get("syncNav") === "1";
     if (all) {
       await requirePermission(request, "manage_navigation");
+      if (syncNav) {
+        const categories = await ensureDefaultNavCategories();
+        return Response.json({ categories, synced: true });
+      }
       return Response.json({ categories: await listAllCategoriesAdmin() });
     }
     // Any signed-in CMS user who can edit posts may load the picker list.

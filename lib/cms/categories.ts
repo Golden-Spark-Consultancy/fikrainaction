@@ -2,6 +2,7 @@ import { getAdminFirestore } from "../firebase/admin";
 import type { Locale } from "../i18n/config";
 import type { CategoryDoc, MenuDoc, MenuItem } from "../types/cms";
 import { COLLECTIONS } from "./collections";
+import { NAV_TAXONOMY } from "./nav-taxonomy";
 import { slugify } from "./slug";
 
 function stripUndefined<T extends Record<string, unknown>>(value: T): T {
@@ -36,6 +37,21 @@ export async function listCategories(): Promise<CategoryDoc[]> {
   return items
     .filter((item) => item.enabled !== false)
     .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
+}
+
+/** Categories for the public navbar; auto-syncs the canonical tree once if missing. */
+export async function listCategoriesForNav(): Promise<CategoryDoc[]> {
+  let items = await listCategories().catch(() => [] as CategoryDoc[]);
+  const hasCanonicalTree = items.some((item) => item.id === "ai-automation");
+  if (!hasCanonicalTree) {
+    try {
+      await ensureDefaultNavCategories();
+      items = await listCategories();
+    } catch {
+      /* keep whatever we have if sync is unavailable */
+    }
+  }
+  return items;
 }
 
 export async function listAllCategoriesAdmin(): Promise<CategoryDoc[]> {
@@ -136,6 +152,70 @@ export async function upsertCategory(input: CategoryInput): Promise<CategoryDoc>
   return doc;
 }
 
+/**
+ * Upsert the canonical navbar category tree into Firestore.
+ * Safe to run repeatedly — merges hierarchy, labels, icons, and showInNav.
+ */
+export async function ensureDefaultNavCategories(): Promise<CategoryDoc[]> {
+  const db = await getAdminFirestore();
+  const now = new Date().toISOString();
+  const batch = db.batch();
+
+  for (const node of NAV_TAXONOMY) {
+    const ref = db.collection(COLLECTIONS.categories).doc(node.id);
+    batch.set(
+      ref,
+      {
+        id: node.id,
+        parentId: node.parentId,
+        order: node.order,
+        showInNav: node.showInNav,
+        icon: node.icon,
+        enabled: true,
+        locales: {
+          ar: {
+            name: node.nameAr,
+            slug: node.slugAr,
+            description: node.descriptionAr || node.nameAr,
+          },
+          en: {
+            name: node.nameEn,
+            slug: node.slugEn,
+            description: node.descriptionEn || node.nameEn,
+          },
+        },
+        updatedAt: now,
+      },
+      { merge: true },
+    );
+  }
+
+  // Hide legacy flat duplicates that would otherwise appear as extra top-level nav items.
+  const legacyTopLevelHide = ["cybersecurity"];
+  for (const id of legacyTopLevelHide) {
+    batch.set(
+      db.collection(COLLECTIONS.categories).doc(id),
+      { showInNav: false, updatedAt: now },
+      { merge: true },
+    );
+  }
+
+  // Old rpi id → keep linked under hardware-group if present.
+  batch.set(
+    db.collection(COLLECTIONS.categories).doc("rpi"),
+    {
+      parentId: "hardware-group",
+      showInNav: false,
+      enabled: false,
+      updatedAt: now,
+    },
+    { merge: true },
+  );
+
+  await batch.commit();
+  return listAllCategoriesAdmin();
+}
+
 export async function deleteCategory(id: string): Promise<void> {
   const db = await getAdminFirestore();
   const children = (await listAllCategoriesAdmin()).filter((cat) => cat.parentId === id);
@@ -189,26 +269,9 @@ export function buildCategoryMenuItems(categories: CategoryDoc[]): MenuItem[] {
   });
 }
 
-const LEGACY_CATEGORY_NAV_IDS = new Set([
-  "ai-automation",
-  "software-group",
-  "hardware-group",
-  "guides",
-  "ai",
-  "automation",
-  "software",
-  "programming",
-  "hardware",
-  "arduino",
-  "rpi",
-  "esp32",
-  "tutorials",
-  "reviews",
-  "search",
-]);
-
 /**
- * Replace hardcoded/legacy category links in a header menu with live CMS categories.
+ * Build the public header from CMS categories (showInNav + parent/child).
+ * Static items stay Home / Blog / About only — categories never come from menu JSON.
  */
 export function mergeCategoriesIntoHeaderMenu(
   menu: MenuDoc,
@@ -247,18 +310,8 @@ export function mergeCategoriesIntoHeaderMenu(
       icon: "about",
     } satisfies MenuItem);
 
-  const extras = source.filter(
-    (item) =>
-      item.id !== home.id &&
-      item.id !== blog.id &&
-      item.id !== about.id &&
-      !LEGACY_CATEGORY_NAV_IDS.has(item.id) &&
-      !item.href?.startsWith("/category/") &&
-      !(Array.isArray(item.children) && item.children.some((child) => child.href?.startsWith("/category/"))),
-  );
-
   return {
     ...menu,
-    items: [home, ...categoryItems, blog, about, ...extras],
+    items: [home, ...categoryItems, blog, about],
   };
 }

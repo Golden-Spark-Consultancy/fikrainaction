@@ -1,0 +1,183 @@
+/**
+ * Canonical navbar category tree.
+ * Firestore categories + the public navbar both use this structure.
+ */
+export type NavTaxonomyNode = {
+  id: string;
+  parentId: string | null;
+  order: number;
+  showInNav: boolean;
+  icon: string;
+  nameAr: string;
+  nameEn: string;
+  slugAr: string;
+  slugEn: string;
+  descriptionAr?: string;
+  descriptionEn?: string;
+};
+
+/** Top-level groups + leaf categories currently expected in the navbar. */
+export const NAV_TAXONOMY: NavTaxonomyNode[] = [
+  {
+    id: "ai-automation",
+    parentId: null,
+    order: 10,
+    showInNav: true,
+    icon: "ai",
+    nameAr: "الذكاء والأتمتة",
+    nameEn: "AI & Automation",
+    slugAr: "ai-automation",
+    slugEn: "ai-automation",
+    descriptionEn: "Artificial intelligence and automation topics.",
+    descriptionAr: "مواضيع الذكاء الاصطناعي والأتمتة.",
+  },
+  {
+    id: "artificial-intelligence",
+    parentId: "ai-automation",
+    order: 11,
+    showInNav: true,
+    icon: "ai",
+    nameAr: "الذكاء الاصطناعي",
+    nameEn: "Artificial Intelligence",
+    slugAr: "artificial-intelligence",
+    slugEn: "artificial-intelligence",
+  },
+  {
+    id: "automation",
+    parentId: "ai-automation",
+    order: 12,
+    showInNav: true,
+    icon: "automation",
+    nameAr: "الأتمتة",
+    nameEn: "Automation",
+    slugAr: "automation",
+    slugEn: "automation",
+  },
+  {
+    id: "software-group",
+    parentId: null,
+    order: 20,
+    showInNav: true,
+    icon: "software",
+    nameAr: "البرمجيات",
+    nameEn: "Software",
+    slugAr: "software-group",
+    slugEn: "software-group",
+    descriptionEn: "Software tools and applications.",
+    descriptionAr: "أدوات وتطبيقات البرمجيات.",
+  },
+  {
+    id: "software",
+    parentId: "software-group",
+    order: 21,
+    showInNav: true,
+    icon: "software",
+    nameAr: "البرمجيات",
+    nameEn: "Software",
+    slugAr: "software",
+    slugEn: "software",
+  },
+  {
+    id: "programming",
+    parentId: "software-group",
+    order: 22,
+    showInNav: true,
+    icon: "programming",
+    nameAr: "البرمجة",
+    nameEn: "Programming",
+    slugAr: "programming",
+    slugEn: "programming",
+  },
+  {
+    id: "hardware-group",
+    parentId: null,
+    order: 30,
+    showInNav: true,
+    icon: "hardware",
+    nameAr: "الأجهزة",
+    nameEn: "Hardware",
+    slugAr: "hardware-group",
+    slugEn: "hardware-group",
+    descriptionEn: "Hardware and maker projects.",
+    descriptionAr: "الأجهزة ومشاريع التصنيع.",
+  },
+  {
+    id: "hardware",
+    parentId: "hardware-group",
+    order: 31,
+    showInNav: true,
+    icon: "hardware",
+    nameAr: "الأجهزة",
+    nameEn: "Hardware",
+    slugAr: "hardware",
+    slugEn: "hardware",
+  },
+  {
+    id: "arduino",
+    parentId: "hardware-group",
+    order: 32,
+    showInNav: true,
+    icon: "arduino",
+    nameAr: "أردوينو",
+    nameEn: "Arduino",
+    slugAr: "arduino",
+    slugEn: "arduino",
+  },
+  {
+    id: "raspberry-pi",
+    parentId: "hardware-group",
+    order: 33,
+    showInNav: true,
+    icon: "raspberry-pi",
+    nameAr: "راسبيري باي",
+    nameEn: "Raspberry Pi",
+    slugAr: "raspberry-pi",
+    slugEn: "raspberry-pi",
+  },
+  {
+    id: "esp32",
+    parentId: "hardware-group",
+    order: 34,
+    showInNav: true,
+    icon: "esp32",
+    nameAr: "ESP32",
+    nameEn: "ESP32",
+    slugAr: "esp32",
+    slugEn: "esp32",
+  },
+  {
+    id: "guides",
+    parentId: null,
+    order: 40,
+    showInNav: true,
+    icon: "guides",
+    nameAr: "شروحات ومراجعات",
+    nameEn: "Guides & Reviews",
+    slugAr: "guides",
+    slugEn: "guides",
+    descriptionEn: "Tutorials, guides, and product reviews.",
+    descriptionAr: "شروحات ومراجعات المنتجات.",
+  },
+  {
+    id: "tutorials",
+    parentId: "guides",
+    order: 41,
+    showInNav: true,
+    icon: "tutorials",
+    nameAr: "شروحات",
+    nameEn: "Tutorials",
+    slugAr: "tutorials",
+    slugEn: "tutorials",
+  },
+  {
+    id: "reviews",
+    parentId: "guides",
+    order: 42,
+    showInNav: true,
+    icon: "reviews",
+    nameAr: "مراجعات",
+    nameEn: "Reviews",
+    slugAr: "reviews",
+    slugEn: "reviews",
+  },
+];

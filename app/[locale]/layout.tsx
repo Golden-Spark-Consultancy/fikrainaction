@@ -7,7 +7,7 @@ import {
   type Locale,
 } from "../../lib/i18n/config";
 import {
-  listCategories,
+  listCategoriesForNav,
   mergeCategoriesIntoHeaderMenu,
 } from "../../lib/cms/categories";
 import { getMenu } from "../../lib/cms/settings";
@@ -30,7 +30,7 @@ export default async function LocaleLayout({
   const [headerMenuRaw, footerMenu, categories] = await Promise.all([
     getMenu("header"),
     getMenu("footer"),
-    listCategories().catch(() => []),
+    listCategoriesForNav().catch(() => []),
   ]);
   const headerMenu = mergeCategoriesIntoHeaderMenu(headerMenuRaw, categories);
 
