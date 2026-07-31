@@ -672,7 +672,8 @@ export function RichTextEditor({
               </button>
             </header>
             <p className="ai-image-lead">
-              Describe the image. It will be generated, uploaded to media, and inserted at the cursor.
+              Describe the image. It will be generated in 16:9, uploaded to media, and inserted at the
+              cursor.
             </p>
             <label className="ai-image-field">
               Prompt

@@ -32,6 +32,17 @@ function imageModels() {
   return [...new Set([preferred, ...defaults].filter(Boolean) as string[])];
 }
 
+/** Gemini image output config — posts use widescreen 16:9. */
+function imageGenerationConfig() {
+  return {
+    responseModalities: ["TEXT", "IMAGE"],
+    temperature: 0.8,
+    imageConfig: {
+      aspectRatio: "16:9",
+    },
+  };
+}
+
 async function storeGeneratedImage(options: {
   buffer: Buffer;
   contentType: string;
@@ -119,7 +130,8 @@ export async function generateAiImageFromPrompt(options: {
 
   const prompt = `Create a single high-quality editorial image for fikraInAction, a practical technology publication.
 User request: ${userPrompt}
-Style: modern, clean, cinematic lighting, abstract tech photography or illustration when appropriate, no logos of real brands unless essential, no watermarks, no UI mockups with fake tiny text, composition suitable for embedding in a blog article.`;
+Aspect ratio: exactly 16:9 widescreen (landscape). Frame the composition for a wide 16:9 blog embed.
+Style: modern, clean, cinematic lighting, abstract tech photography or illustration when appropriate, no logos of real brands unless essential, no watermarks, no UI mockups with fake tiny text.`;
 
   const alt = (options.alt || userPrompt).slice(0, 180);
   let lastError = "";
@@ -132,10 +144,7 @@ Style: modern, clean, cinematic lighting, abstract tech photography or illustrat
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseModalities: ["TEXT", "IMAGE"],
-            temperature: 0.8,
-          },
+          generationConfig: imageGenerationConfig(),
         }),
         signal: AbortSignal.timeout(60_000),
       });
@@ -213,10 +222,7 @@ Style: modern, clean, cinematic lighting, abstract tech photography or illustrat
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseModalities: ["TEXT", "IMAGE"],
-            temperature: 0.8,
-          },
+          generationConfig: imageGenerationConfig(),
         }),
         signal: AbortSignal.timeout(45_000),
       });
