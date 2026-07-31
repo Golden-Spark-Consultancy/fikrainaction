@@ -587,6 +587,7 @@ export async function generateBlogDraftForTopic(topic: string, options: Generate
     // Video discovery is best-effort.
   }
 
+  // One shared postId links AR + EN locales together for language switching.
   const postId = options.postId || randomUUID();
   const sharedFields: Omit<PostShared, "id" | "createdAt" | "updatedAt" | "createdBy" | "updatedBy"> & { updatedBy: string } = {
     authorId: options.createdBy,
@@ -607,13 +608,16 @@ export async function generateBlogDraftForTopic(topic: string, options: Generate
   };
 
   const shortId = postId.replace(/-/g, "").slice(0, 8);
+  // Prefer a shared Latin slug so AR/EN stay easy to pair; still unique per post.
+  const sharedSlugBase =
+    slugify(outline.locales.en?.title || cleanTopic, "en") ||
+    slugify(outline.locales.ar?.title || cleanTopic, "ar") ||
+    "post";
+  const sharedSlug = `${sharedSlugBase}-${shortId}`.slice(0, 180);
 
   for (const locale of locales) {
     const localeOutline = outline.locales[locale] ?? buildFallbackOutline(cleanTopic, [locale]).locales[locale]!;
     const content = buildTiptapDoc(localeOutline, { locale, sources, youtube, recommendation: recommendationLink });
-    const baseSlug = slugify(localeOutline.title || cleanTopic, locale) || "post";
-    // Unique per post to avoid slug reservation collisions across a batch.
-    const uniqueSlug = `${baseSlug}-${shortId}`.slice(0, 180);
 
     try {
       await upsertPostLocale({
@@ -622,7 +626,7 @@ export async function generateBlogDraftForTopic(topic: string, options: Generate
         locale: {
           locale,
           title: localeOutline.title || cleanTopic,
-          slug: uniqueSlug,
+          slug: sharedSlug,
           excerpt: localeOutline.excerpt,
           content,
           seo: { title: localeOutline.seoTitle, description: localeOutline.seoDescription },
@@ -634,8 +638,8 @@ export async function generateBlogDraftForTopic(topic: string, options: Generate
         },
       });
     } catch (error) {
-      // Retry once with a fully unique slug if reservation still collides.
-      const retrySlug = `post-${locale}-${shortId}-${randomUUID().slice(0, 6)}`;
+      // Retry once with a fully unique shared slug if reservation still collides.
+      const retrySlug = `post-${shortId}-${randomUUID().slice(0, 6)}`;
       if (!(error instanceof Error) || !/slug/i.test(error.message)) throw error;
       await upsertPostLocale({
         postId,
@@ -824,6 +828,8 @@ export async function processNextAiItem(
         includeRecommendations: batch.includeRecommendations,
         createdBy: batch.createdBy,
         batchId,
+        // Reuse postId on retry so AR/EN stay on the same linked post.
+        postId: item.postId || undefined,
       });
       const completedAt = new Date().toISOString();
       const updatedItem: AiBatchItem = {
@@ -838,7 +844,8 @@ export async function processNextAiItem(
         )
           ? "missing"
           : "ready",
-        languageStatus: result.researchStatus,
+        languageStatus:
+          batch.language === "both" ? "both" : result.researchStatus,
         updatedAt: completedAt,
       };
       await doc.ref.set(stripUndefined(updatedItem as unknown as Record<string, unknown>), {

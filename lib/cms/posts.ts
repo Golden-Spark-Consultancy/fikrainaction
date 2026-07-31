@@ -97,6 +97,59 @@ export async function getPostLocale(postId: string, locale: Locale): Promise<Pos
   return null;
 }
 
+/**
+ * Resolve the sibling-locale blog slug for a post found by locale + slug.
+ * AR/EN share one `postId`; each locale may use a different slug.
+ */
+export async function resolveAlternateBlogSlug(
+  locale: Locale,
+  slug: string,
+  options: { requirePublished?: boolean } = {},
+): Promise<{ postId: string; otherLocale: Locale; slug: string; status: ContentStatus } | null> {
+  const requirePublished = options.requirePublished !== false;
+  const otherLocale: Locale = locale === "ar" ? "en" : "ar";
+  const db = await getAdminFirestore();
+
+  let current: PostLocale | null = null;
+  const collection = db.collection(COLLECTIONS.postLocales);
+  const snap = requirePublished
+    ? await collection
+        .where("locale", "==", locale)
+        .where("slug", "==", slug)
+        .where("status", "==", "published")
+        .limit(1)
+        .get()
+    : await collection
+        .where("locale", "==", locale)
+        .where("slug", "==", slug)
+        .limit(1)
+        .get();
+  if (!snap.empty) {
+    current = snap.docs[0].data() as PostLocale;
+  } else if (locale === "en") {
+    const legacy = await db.collection(LEGACY_COLLECTIONS.blogPosts).doc(slug).get();
+    if (legacy.exists) {
+      const data = legacy.data() as FirebaseFirestore.DocumentData;
+      if (!requirePublished || data.status === "published") {
+        current = mapLegacyBlogPost(legacy.id, data, "en").locale;
+      }
+    }
+  }
+
+  if (!current?.postId) return null;
+
+  const other = await getPostLocale(current.postId, otherLocale);
+  if (!other?.slug) return null;
+  if (requirePublished && other.status !== "published") return null;
+
+  return {
+    postId: current.postId,
+    otherLocale,
+    slug: other.slug,
+    status: other.status,
+  };
+}
+
 export async function getPostBySlug(locale: Locale, slug: string): Promise<{ shared: PostShared; locale: PostLocale } | null> {
   const db = await getAdminFirestore();
   const query = await db

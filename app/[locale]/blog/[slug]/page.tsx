@@ -26,20 +26,30 @@ export async function generateMetadata({
 }) {
   const { locale: raw, slug } = await params;
   if (!isLocale(raw)) return {};
-  const found = await getPostBySlug(raw, slug).catch(() => null);
+  const locale = raw as Locale;
+  const found = await getPostBySlug(locale, slug).catch(() => null);
   if (found) {
+    const other = locale === "ar" ? "en" : "ar";
+    const otherLocale = await getPostLocale(found.shared.id, other).catch(() => null);
+    const alternatePaths: Partial<Record<Locale, string>> = {
+      [locale]: `/blog/${found.locale.slug}`,
+    };
+    if (otherLocale?.status === "published" && otherLocale.slug) {
+      alternatePaths[other] = `/blog/${otherLocale.slug}`;
+    }
     return buildPageMetadata({
-      locale: raw,
+      locale,
       title: found.locale.seo.title || found.locale.title,
       description: found.locale.seo.description || found.locale.excerpt,
-      path: `/blog/${slug}`,
+      path: `/blog/${found.locale.slug}`,
+      alternatePaths,
       type: "article",
     });
   }
   const seed = seedPosts.find((p) => p.slug === slug);
-  if (seed && raw === "en") {
+  if (seed && locale === "en") {
     return buildPageMetadata({
-      locale: raw,
+      locale,
       title: seed.title,
       description: seed.excerpt,
       path: `/blog/${slug}`,
@@ -68,12 +78,13 @@ export default async function BlogArticlePage({
   let isAffiliate = found?.shared.isAffiliateContent ?? false;
   let commentsEnabled = found?.shared.commentsEnabled !== false;
   let postId = found?.shared.id ?? slug;
-  let altLocaleAvailable = false;
+  let altLocalePath: string | null = null;
 
   if (!found) {
     const seed = seedPosts.find((p) => p.slug === slug);
     if (!seed || locale !== "en") {
       const other = locale === "ar" ? "en" : "ar";
+      // Same slug may exist in the other locale; otherwise no public match.
       const otherPost = await getPostBySlug(other, slug).catch(() => null);
       if (otherPost) {
         return (
@@ -81,7 +92,7 @@ export default async function BlogArticlePage({
             <div className="container blog-article-shell">
               <h1>{t("common.translationUnavailable")}</h1>
               <p>
-                <Link href={localizedPath(other, `/blog/${slug}`)}>
+                <Link href={localizedPath(other, `/blog/${otherPost.locale.slug}`)}>
                   {t("common.viewAvailableLocale")}
                 </Link>
               </p>
@@ -96,9 +107,10 @@ export default async function BlogArticlePage({
     html = `<p>${seed.excerpt}</p><p>This demonstration article is reserved for editorial expansion in the fikraInAction CMS.</p>`;
   } else {
     const other = locale === "ar" ? "en" : "ar";
-    altLocaleAvailable = Boolean(
-      await getPostLocale(found.shared.id, other).catch(() => null),
-    );
+    const otherLocale = await getPostLocale(found.shared.id, other).catch(() => null);
+    if (otherLocale?.status === "published" && otherLocale.slug) {
+      altLocalePath = localizedPath(other, `/blog/${otherLocale.slug}`);
+    }
   }
 
   const headings = extractHeadingsFromHtml(html);
@@ -147,13 +159,10 @@ export default async function BlogArticlePage({
                     {t("common.published")} {publishedAt.slice(0, 10)}
                   </span>
                 ) : null}
-                {altLocaleAvailable ? (
+                {altLocalePath ? (
                   <Link
                     className="blog-article-chip blog-article-chip-link"
-                    href={localizedPath(
-                      locale === "ar" ? "en" : "ar",
-                      `/blog/${slug}`,
-                    )}
+                    href={altLocalePath}
                   >
                     {t("common.viewAvailableLocale")}
                   </Link>

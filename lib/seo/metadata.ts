@@ -6,14 +6,18 @@ export function buildPageMetadata(options: {
   title: string;
   description: string;
   path?: string;
+  /** Per-locale paths when AR/EN slugs differ (e.g. linked blog translations). */
+  alternatePaths?: Partial<Record<Locale, string>>;
   image?: string;
   type?: "website" | "article";
   noIndex?: boolean;
 }): Metadata {
   const path = options.path ?? "/";
+  const arPath = options.alternatePaths?.ar ?? path;
+  const enPath = options.alternatePaths?.en ?? path;
   const canonical = `${SITE_URL}${localizedPath(options.locale, path)}`;
-  const arUrl = `${SITE_URL}${localizedPath("ar", path)}`;
-  const enUrl = `${SITE_URL}${localizedPath("en", path)}`;
+  const arUrl = `${SITE_URL}${localizedPath("ar", arPath)}`;
+  const enUrl = `${SITE_URL}${localizedPath("en", enPath)}`;
 
   return {
     title: options.title,
