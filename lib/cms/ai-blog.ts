@@ -606,26 +606,56 @@ export async function generateBlogDraftForTopic(topic: string, options: Generate
     updatedBy: options.createdBy,
   };
 
+  const shortId = postId.replace(/-/g, "").slice(0, 8);
+
   for (const locale of locales) {
     const localeOutline = outline.locales[locale] ?? buildFallbackOutline(cleanTopic, [locale]).locales[locale]!;
     const content = buildTiptapDoc(localeOutline, { locale, sources, youtube, recommendation: recommendationLink });
-    await upsertPostLocale({
-      postId,
-      shared: sharedFields,
-      locale: {
-        locale,
-        title: localeOutline.title || cleanTopic,
-        slug: slugify(localeOutline.title || cleanTopic, locale) || postId,
-        excerpt: localeOutline.excerpt,
-        content,
-        seo: { title: localeOutline.seoTitle, description: localeOutline.seoDescription },
-        status: "draft",
-        publishedAt: null,
-        scheduledAt: null,
-        lastReviewedAt: null,
-        updatedBy: options.createdBy,
-      },
-    });
+    const baseSlug = slugify(localeOutline.title || cleanTopic, locale) || "post";
+    // Unique per post to avoid slug reservation collisions across a batch.
+    const uniqueSlug = `${baseSlug}-${shortId}`.slice(0, 180);
+
+    try {
+      await upsertPostLocale({
+        postId,
+        shared: sharedFields,
+        locale: {
+          locale,
+          title: localeOutline.title || cleanTopic,
+          slug: uniqueSlug,
+          excerpt: localeOutline.excerpt,
+          content,
+          seo: { title: localeOutline.seoTitle, description: localeOutline.seoDescription },
+          status: "draft",
+          publishedAt: null,
+          scheduledAt: null,
+          lastReviewedAt: null,
+          updatedBy: options.createdBy,
+        },
+      });
+    } catch (error) {
+      // Retry once with a fully unique slug if reservation still collides.
+      const retrySlug = `post-${locale}-${shortId}-${randomUUID().slice(0, 6)}`;
+      if (!(error instanceof Error) || !/slug/i.test(error.message)) throw error;
+      await upsertPostLocale({
+        postId,
+        shared: sharedFields,
+        locale: {
+          locale,
+          title: localeOutline.title || cleanTopic,
+          slug: retrySlug,
+          excerpt: localeOutline.excerpt,
+          content,
+          seo: { title: localeOutline.seoTitle, description: localeOutline.seoDescription },
+          status: "draft",
+          publishedAt: null,
+          scheduledAt: null,
+          lastReviewedAt: null,
+          updatedBy: options.createdBy,
+        },
+      });
+      warnings.push(`Slug conflict resolved for ${locale}; used ${retrySlug}.`);
+    }
   }
 
   return { postId, warnings, sources, researchStatus };
@@ -796,28 +826,36 @@ export async function processNextAiItem(
         batchId,
       });
       const completedAt = new Date().toISOString();
-      const updatedItem: AiBatchItem = stripUndefined({
+      const updatedItem: AiBatchItem = {
         ...item,
         status: "completed",
         postId: result.postId,
-        locale: batch.language === "both" ? undefined : batch.language,
+        locale: batch.language === "en" ? "en" : "ar",
         sources: result.sources,
         warnings: result.warnings,
-        featuredImageStatus: result.warnings.some((warning) => warning.toLowerCase().includes("featured image")) ? "missing" : "ready",
+        featuredImageStatus: result.warnings.some((warning) =>
+          warning.toLowerCase().includes("featured image"),
+        )
+          ? "missing"
+          : "ready",
         languageStatus: result.researchStatus,
         updatedAt: completedAt,
+      };
+      await doc.ref.set(stripUndefined(updatedItem as unknown as Record<string, unknown>), {
+        merge: true,
       });
-      await doc.ref.set(updatedItem, { merge: true });
       processed.push(updatedItem);
     } catch (error) {
       const failedAt = new Date().toISOString();
-      const updatedItem: AiBatchItem = stripUndefined({
+      const updatedItem: AiBatchItem = {
         ...item,
         status: "failed",
         error: error instanceof Error ? error.message : "Generation failed.",
         updatedAt: failedAt,
+      };
+      await doc.ref.set(stripUndefined(updatedItem as unknown as Record<string, unknown>), {
+        merge: true,
       });
-      await doc.ref.set(updatedItem, { merge: true });
       processed.push(updatedItem);
     }
   }

@@ -140,21 +140,31 @@ export async function GET(request: Request) {
       });
     }
 
-    const localesSnap = await db
+    let localesSnap = await db
       .collection(COLLECTIONS.postLocales)
       .orderBy("updatedAt", "desc")
       .limit(500)
       .get()
       .catch(() => null);
 
+    // Fallback when orderBy fails (missing field/index) so AI drafts still appear.
+    if (!localesSnap) {
+      localesSnap = await db
+        .collection(COLLECTIONS.postLocales)
+        .limit(500)
+        .get()
+        .catch(() => null);
+    }
+
     let articles = (localesSnap?.docs.map((d) => {
       const data = d.data();
+      const docId = String(data.postId || d.id);
       return {
-        id: data.postId || d.id,
+        id: docId.replace(/_(ar|en)$/i, ""),
         locale: data.locale,
-        title: data.title,
-        slug: data.slug,
-        status: data.status,
+        title: data.title || "Untitled",
+        slug: data.slug || "",
+        status: data.status || "draft",
         excerpt: data.excerpt,
         updatedAt: data.updatedAt,
         publishedAt: data.publishedAt,
@@ -171,6 +181,8 @@ export async function GET(request: Request) {
       publishedAt?: string;
       source: string;
     }>;
+
+    articles.sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
 
     if (status) articles = articles.filter((a) => a.status === status);
     if (localeFilter) articles = articles.filter((a) => a.locale === localeFilter);

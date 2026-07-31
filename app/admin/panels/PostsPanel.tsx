@@ -165,7 +165,13 @@ function buildEditorState(
   });
 }
 
-export function PostsPanel() {
+export function PostsPanel({
+  initialPostId,
+  initialLocale,
+}: {
+  initialPostId?: string;
+  initialLocale?: Locale;
+} = {}) {
   const [posts, setPosts] = useState<PostListItem[]>([]);
   const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
@@ -180,18 +186,20 @@ export function PostsPanel() {
   const [saving, setSaving] = useState(false);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const editorRef = useRef<EditorState | null>(null);
+  const openedInitialRef = useRef(false);
   editorRef.current = editor;
 
   const loadList = useCallback(async () => {
     const params = new URLSearchParams();
     if (search.trim()) params.set("q", search.trim());
     if (statusFilter !== "all") params.set("status", statusFilter);
-    if (localeFilter !== "all") params.set("locale", localeFilter);
+    if (localeFilter !== "all") params.set("filterLocale", localeFilter);
+    params.set("pageSize", "200");
     const query = params.toString();
-    const res = await firebaseAuthorizedFetch(`/api/articles${query ? `?${query}` : ""}`);
+    const res = await firebaseAuthorizedFetch(`/api/articles?${query}`);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Unable to load posts");
-    setPosts(data.articles || []);
+    setPosts(data.articles || data.posts || []);
     setLoadError("");
   }, [search, statusFilter, localeFilter]);
 
@@ -200,6 +208,39 @@ export function PostsPanel() {
       setLoadError(error instanceof Error ? error.message : "Unable to load posts"),
     );
   }, [loadList]);
+
+  useEffect(() => {
+    if (!initialPostId || openedInitialRef.current) return;
+    openedInitialRef.current = true;
+    const preferred = initialLocale || "ar";
+    const fallback: Locale = preferred === "ar" ? "en" : "ar";
+    void (async () => {
+      try {
+        const tryLocale = async (locale: Locale) => {
+          const res = await firebaseAuthorizedFetch(
+            `/api/articles?id=${encodeURIComponent(initialPostId)}&locale=${encodeURIComponent(locale)}`,
+          );
+          const data = await res.json();
+          if (!res.ok) return false;
+          if (!data.article?.locale) return false;
+          const shared = (data.article.shared || {}) as Record<string, unknown>;
+          const localeData = data.article.locale as Record<string, unknown>;
+          setRevisions(data.article.revisions || []);
+          setEditor(buildEditorState(initialPostId, locale, shared, localeData));
+          setMessage(`Opened AI draft (${locale}).`);
+          return true;
+        };
+        const opened =
+          (await tryLocale(preferred)) ||
+          (preferred !== fallback && (await tryLocale(fallback)));
+        if (!opened) {
+          setMessage("Draft was not found in Posts yet. Filter by Draft or refresh the list.");
+        }
+      } catch {
+        setMessage("Unable to open the generated draft. Check the posts list for drafts.");
+      }
+    })();
+  }, [initialPostId, initialLocale]);
 
   useEffect(() => {
     if (!editor?.dirty) return;

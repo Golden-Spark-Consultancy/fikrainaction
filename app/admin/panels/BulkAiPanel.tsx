@@ -76,7 +76,11 @@ function parseCsvFirstColumn(text: string): string[] {
   return values;
 }
 
-export function BulkAiPanel({ onOpenPost }: { onOpenPost?: (postId?: string) => void }) {
+export function BulkAiPanel({
+  onOpenPost,
+}: {
+  onOpenPost?: (postId?: string, locale?: "ar" | "en") => void;
+}) {
   const [topicsText, setTopicsText] = useState("");
   const [language, setLanguage] = useState<BatchLanguage>("both");
   const [length, setLength] = useState<BatchLength>("medium");
@@ -454,7 +458,15 @@ export function BulkAiPanel({ onOpenPost }: { onOpenPost?: (postId?: string) => 
                     </button>
                   )}
                   {item.postId && (
-                    <button type="button" onClick={() => onOpenPost?.(item.postId)}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onOpenPost?.(
+                          item.postId,
+                          item.locale === "en" || item.locale === "ar" ? item.locale : "ar",
+                        )
+                      }
+                    >
                       Open draft
                     </button>
                   )}
@@ -498,9 +510,9 @@ export function BulkAiPanel({ onOpenPost }: { onOpenPost?: (postId?: string) => 
                   </small>
                 </div>
                 <span className={`draft-badge ${batch.status}`}>{STATUS_LABELS[batch.status]}</span>
-                <a role="button" tabIndex={0} onClick={() => void openHistoryBatch(batch.id)}>
-                  View
-                </a>
+                <button type="button" onClick={() => void openHistoryBatch(batch.id)}>
+                  View batch
+                </button>
               </article>
             ))}
           </div>

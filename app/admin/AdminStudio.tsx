@@ -45,6 +45,8 @@ export function AdminStudio({
 }) {
   const [view, setView] = useState<AdminView>("dashboard");
   const [postsKey, setPostsKey] = useState(0);
+  const [openPostId, setOpenPostId] = useState<string | undefined>();
+  const [openPostLocale, setOpenPostLocale] = useState<"ar" | "en" | undefined>();
 
   return (
     <main className="admin-shell cms-admin">
@@ -119,10 +121,18 @@ export function AdminStudio({
             onOpenMedia={() => setView("media")}
           />
         )}
-        {view === "posts" && <PostsPanel key={postsKey} />}
+        {view === "posts" && (
+          <PostsPanel
+            key={postsKey}
+            initialPostId={openPostId}
+            initialLocale={openPostLocale}
+          />
+        )}
         {view === "bulk-ai" && (
           <BulkAiPanel
-            onOpenPost={() => {
+            onOpenPost={(postId, locale) => {
+              setOpenPostId(postId);
+              setOpenPostLocale(locale);
               setPostsKey((k) => k + 1);
               setView("posts");
             }}
