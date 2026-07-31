@@ -14,20 +14,6 @@ export function defaultHeaderMenu(): MenuDoc {
         enabled: true,
         icon: "home",
       },
-      {
-        id: "blog",
-        label: { ar: "المدونة", en: "Blog" },
-        href: "/blog",
-        enabled: true,
-        icon: "blog",
-      },
-      {
-        id: "about",
-        label: { ar: "من نحن", en: "About" },
-        href: "/about",
-        enabled: true,
-        icon: "about",
-      },
     ],
   };
 }
@@ -38,7 +24,13 @@ export function defaultHeaderMenu(): MenuDoc {
  */
 export function normalizeHeaderMenu(menu?: MenuDoc | null): MenuItem[] {
   const source = (menu?.items ?? defaultHeaderMenu().items).filter(
-    (item) => item.enabled !== false && item.id !== "search",
+    (item) =>
+      item.enabled !== false &&
+      item.id !== "search" &&
+      item.id !== "blog" &&
+      item.id !== "about" &&
+      item.href !== "/blog" &&
+      item.href !== "/about",
   );
   return source.map(withIcons);
 }

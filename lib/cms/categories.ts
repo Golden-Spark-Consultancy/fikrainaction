@@ -271,7 +271,7 @@ export function buildCategoryMenuItems(categories: CategoryDoc[]): MenuItem[] {
 
 /**
  * Build the public header from CMS categories (showInNav + parent/child).
- * Static items stay Home / Blog / About only — categories never come from menu JSON.
+ * Static chrome is Home only — Blog/About are not shown in the navbar.
  */
 export function mergeCategoriesIntoHeaderMenu(
   menu: MenuDoc,
@@ -290,28 +290,8 @@ export function mergeCategoriesIntoHeaderMenu(
       icon: "home",
     } satisfies MenuItem);
 
-  const blog =
-    source.find((item) => item.id === "blog" || item.href === "/blog") ||
-    ({
-      id: "blog",
-      label: { ar: "المدونة", en: "Blog" },
-      href: "/blog",
-      enabled: true,
-      icon: "blog",
-    } satisfies MenuItem);
-
-  const about =
-    source.find((item) => item.id === "about" || item.href === "/about") ||
-    ({
-      id: "about",
-      label: { ar: "من نحن", en: "About" },
-      href: "/about",
-      enabled: true,
-      icon: "about",
-    } satisfies MenuItem);
-
   return {
     ...menu,
-    items: [home, ...categoryItems, blog, about],
+    items: [home, ...categoryItems],
   };
 }
