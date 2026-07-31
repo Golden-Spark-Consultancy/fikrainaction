@@ -32,12 +32,13 @@ function imageModels() {
   return [...new Set([preferred, ...defaults].filter(Boolean) as string[])];
 }
 
-async function storeFeaturedImage(options: {
+async function storeGeneratedImage(options: {
   buffer: Buffer;
   contentType: string;
   fileName: string;
   alt: string;
   uploadedBy: string;
+  source?: string;
 }): Promise<{ url: string; mediaId: string }> {
   const db = await getAdminFirestore();
   const storage = await getAdminStorage();
@@ -56,7 +57,7 @@ async function storeFeaturedImage(options: {
       metadata: {
         uploadedBy: options.uploadedBy,
         originalName: options.fileName,
-        source: "ai-featured-image",
+        source: options.source || "ai-image",
       },
     },
   });
@@ -98,6 +99,92 @@ async function storeFeaturedImage(options: {
     .catch(() => undefined);
 
   return { url, mediaId: id };
+}
+
+/**
+ * Generate an image from a freeform prompt (editor insert), store in Media, return URL.
+ */
+export async function generateAiImageFromPrompt(options: {
+  prompt: string;
+  alt?: string;
+  uploadedBy: string;
+}): Promise<{ url: string; mediaId: string; alt: string } | { error: string }> {
+  const apiKey = geminiApiKey();
+  if (!apiKey) {
+    return { error: "GEMINI_API_KEY is not configured for image generation." };
+  }
+
+  const userPrompt = options.prompt.trim();
+  if (!userPrompt) return { error: "Prompt is required." };
+
+  const prompt = `Create a single high-quality editorial image for fikraInAction, a practical technology publication.
+User request: ${userPrompt}
+Style: modern, clean, cinematic lighting, abstract tech photography or illustration when appropriate, no logos of real brands unless essential, no watermarks, no UI mockups with fake tiny text, composition suitable for embedding in a blog article.`;
+
+  const alt = (options.alt || userPrompt).slice(0, 180);
+  let lastError = "";
+
+  for (const model of imageModels()) {
+    try {
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseModalities: ["TEXT", "IMAGE"],
+            temperature: 0.8,
+          },
+        }),
+        signal: AbortSignal.timeout(60_000),
+      });
+      const payload = (await response.json()) as {
+        error?: { message?: string };
+        candidates?: Array<{
+          content?: {
+            parts?: Array<{
+              inlineData?: { mimeType?: string; data?: string };
+              inline_data?: { mime_type?: string; data?: string };
+            }>;
+          };
+        }>;
+      };
+      if (!response.ok) {
+        lastError = payload.error?.message || `HTTP ${response.status}`;
+        continue;
+      }
+
+      const parts = payload.candidates?.[0]?.content?.parts || [];
+      for (const part of parts) {
+        const data = part.inlineData?.data || part.inline_data?.data;
+        const mime =
+          part.inlineData?.mimeType || part.inline_data?.mime_type || "image/png";
+        if (!data) continue;
+        const buffer = Buffer.from(data, "base64");
+        if (buffer.byteLength < 1_000) continue;
+        const ext = mime.includes("jpeg") || mime.includes("jpg")
+          ? "jpg"
+          : mime.includes("webp")
+            ? "webp"
+            : "png";
+        const stored = await storeGeneratedImage({
+          buffer,
+          contentType: mime.startsWith("image/") ? mime : "image/png",
+          fileName: `ai-inline-${randomUUID().slice(0, 8)}.${ext}`,
+          alt,
+          uploadedBy: options.uploadedBy,
+          source: "ai-editor-image",
+        });
+        return { url: stored.url, mediaId: stored.mediaId, alt };
+      }
+      lastError = `Model ${model} returned no image data.`;
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : "Image generation failed.";
+    }
+  }
+
+  return { error: lastError || "AI image generation failed." };
 }
 
 async function generateWithGemini(options: {
@@ -163,12 +250,13 @@ Style: modern, clean, cinematic lighting, abstract tech photography or illustrat
             ? "webp"
             : "png";
         const alt = options.title || options.topic;
-        const stored = await storeFeaturedImage({
+        const stored = await storeGeneratedImage({
           buffer,
           contentType: mime.startsWith("image/") ? mime : "image/png",
           fileName: `ai-hero-${randomUUID().slice(0, 8)}.${ext}`,
           alt,
           uploadedBy: options.uploadedBy,
+          source: "ai-featured-image",
         });
         return {
           thumbnailUrl: stored.url,

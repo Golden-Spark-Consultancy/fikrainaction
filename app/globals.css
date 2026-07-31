@@ -1939,6 +1939,95 @@ html[dir="rtl"] .home-banner-shade {
   color: #6f7f8c;
   font-size: 11px;
 }
+
+/* AI image prompt modal (TipTap toolbar) */
+.ai-image-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+.ai-image-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(0, 19, 41, 0.55);
+  cursor: pointer;
+}
+.ai-image-panel {
+  position: relative;
+  z-index: 1;
+  width: min(520px, 100%);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+  padding: 18px 20px 20px;
+  box-shadow: 0 28px 80px rgba(0, 19, 41, 0.28);
+}
+.ai-image-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.ai-image-head h3 {
+  margin: 4px 0 0;
+  font-size: 18px;
+  letter-spacing: -.03em;
+}
+.ai-image-lead {
+  margin: 0 0 14px;
+  color: #6a7882;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.ai-image-field {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+  color: #45524b;
+  font-size: 11px;
+  font-weight: 700;
+}
+.ai-image-field textarea,
+.ai-image-field input {
+  width: 100%;
+  border: 1px solid #dce3dd;
+  background: #fbfcfb;
+  border-radius: 8px;
+  padding: 10px 11px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  resize: vertical;
+}
+.ai-image-field textarea:focus,
+.ai-image-field input:focus {
+  border-color: #5aa8e8;
+  box-shadow: 0 0 0 3px rgba(22, 140, 255, .16);
+  outline: none;
+  background: #fff;
+}
+.ai-image-error {
+  margin: 0 0 12px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  border: 1px solid #f0c8c8;
+  background: #fff5f5;
+  color: #a33b3b;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.ai-image-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 .post-editor-page .category-picker {
   max-height: 320px;
   overflow: auto;

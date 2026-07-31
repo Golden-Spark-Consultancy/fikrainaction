@@ -16,7 +16,8 @@ import TaskList from "@tiptap/extension-task-list";
 import TextAlign from "@tiptap/extension-text-align";
 import StarterKit from "@tiptap/starter-kit";
 import { common, createLowlight } from "lowlight";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { firebaseAuthorizedFetch } from "../../lib/firebase/api";
 import { youtubeEmbedUrl } from "../../lib/sanitize";
 
 type Props = {
@@ -203,11 +204,15 @@ function Toolbar({
   fullscreen,
   onToggleFullscreen,
   onRequestMedia,
+  onRequestAiImage,
+  aiGenerating,
 }: {
   editor: Editor;
   fullscreen: boolean;
   onToggleFullscreen: () => void;
   onRequestMedia?: (insert: (src: string, alt?: string) => void) => void;
+  onRequestAiImage?: () => void;
+  aiGenerating?: boolean;
 }) {
   function insertLink() {
     const previousHref = (editor.getAttributes("link").href as string | undefined) || "";
@@ -453,9 +458,18 @@ function Toolbar({
         <ToolbarButton title="Link" active={editor.isActive("link")} onClick={insertLink}>
           🔗
         </ToolbarButton>
-        <ToolbarButton title="Image" onClick={insertImage}>
+        <ToolbarButton title="Image from library" onClick={insertImage}>
           🖼
         </ToolbarButton>
+        {onRequestAiImage ? (
+          <ToolbarButton
+            title="Generate image with AI"
+            onClick={onRequestAiImage}
+            disabled={aiGenerating}
+          >
+            {aiGenerating ? "…" : "✦ AI"}
+          </ToolbarButton>
+        ) : null}
         <ToolbarButton title="YouTube video" onClick={insertYoutube}>
           ▶
         </ToolbarButton>
@@ -491,6 +505,12 @@ export function RichTextEditor({
   onRequestMedia,
 }: Props) {
   const [fullscreen, setFullscreen] = useState(false);
+  const [aiPromptOpen, setAiPromptOpen] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiAlt, setAiAlt] = useState("");
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiError, setAiError] = useState("");
+  const insertPosRef = useRef<number | null>(null);
   const resolvedDir: "rtl" | "ltr" = dir || (locale === "ar" ? "rtl" : "ltr");
 
   const editor = useEditor(
@@ -552,6 +572,56 @@ export function RichTextEditor({
   const characters = editor.storage.characterCount?.characters?.() ?? 0;
   const words = editor.storage.characterCount?.words?.() ?? 0;
 
+  function openAiImagePrompt() {
+    insertPosRef.current = editor.state.selection.from;
+    setAiError("");
+    setAiPrompt("");
+    setAiAlt("");
+    setAiPromptOpen(true);
+  }
+
+  async function generateAiImage() {
+    const prompt = aiPrompt.trim();
+    if (!prompt) {
+      setAiError("Enter a prompt describing the image.");
+      return;
+    }
+    setAiGenerating(true);
+    setAiError("");
+    try {
+      const res = await firebaseAuthorizedFetch("/api/cms/ai-image", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          prompt,
+          alt: aiAlt.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Unable to generate image.");
+      const url = String(data.asset?.url || "");
+      const alt = String(data.asset?.alt || aiAlt.trim() || prompt);
+      if (!url) throw new Error("Generation returned no image URL.");
+
+      const pos = insertPosRef.current ?? editor.state.selection.from;
+      editor
+        .chain()
+        .focus()
+        .insertContentAt(pos, {
+          type: "image",
+          attrs: { src: url, alt },
+        })
+        .run();
+      setAiPromptOpen(false);
+      setAiPrompt("");
+      setAiAlt("");
+    } catch (error) {
+      setAiError(error instanceof Error ? error.message : "Unable to generate image.");
+    } finally {
+      setAiGenerating(false);
+    }
+  }
+
   return (
     <div
       className={`rich-editor${fullscreen ? " rich-editor-fullscreen" : ""}`}
@@ -565,12 +635,86 @@ export function RichTextEditor({
         fullscreen={fullscreen}
         onToggleFullscreen={() => setFullscreen((value) => !value)}
         onRequestMedia={onRequestMedia}
+        onRequestAiImage={openAiImagePrompt}
+        aiGenerating={aiGenerating}
       />
       <EditorContent editor={editor} className="rich-editor-surface" />
       <div className="rich-editor-footer">
         <span>{characters} characters</span>
         <span>{words} words</span>
       </div>
+
+      {aiPromptOpen ? (
+        <div className="ai-image-modal" role="dialog" aria-modal="true" aria-label="Generate AI image">
+          <button
+            type="button"
+            className="ai-image-backdrop"
+            aria-label="Close"
+            disabled={aiGenerating}
+            onClick={() => {
+              if (!aiGenerating) setAiPromptOpen(false);
+            }}
+          />
+          <div className="ai-image-panel">
+            <header className="ai-image-head">
+              <div>
+                <p className="micro-label">AI image</p>
+                <h3>Generate image</h3>
+              </div>
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={aiGenerating}
+                onClick={() => setAiPromptOpen(false)}
+              >
+                Close
+              </button>
+            </header>
+            <p className="ai-image-lead">
+              Describe the image. It will be generated, uploaded to media, and inserted at the cursor.
+            </p>
+            <label className="ai-image-field">
+              Prompt
+              <textarea
+                rows={4}
+                value={aiPrompt}
+                disabled={aiGenerating}
+                autoFocus
+                placeholder="e.g. A clean isometric illustration of a Raspberry Pi with sensors on a desk…"
+                onChange={(event) => setAiPrompt(event.target.value)}
+              />
+            </label>
+            <label className="ai-image-field">
+              Alt text (optional)
+              <input
+                value={aiAlt}
+                disabled={aiGenerating}
+                placeholder="Short description for accessibility"
+                onChange={(event) => setAiAlt(event.target.value)}
+              />
+            </label>
+            {aiError ? <p className="ai-image-error">{aiError}</p> : null}
+            <div className="ai-image-actions">
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={aiGenerating}
+                onClick={() => setAiPromptOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={aiGenerating || !aiPrompt.trim()}
+                onClick={() => void generateAiImage()}
+              >
+                {aiGenerating ? "Generating…" : "Generate & insert"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
