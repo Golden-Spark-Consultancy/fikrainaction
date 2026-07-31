@@ -568,12 +568,13 @@ export function RichTextEditor({
   }, [editor, initialContent]);
 
   if (!editor) return null;
+  const activeEditor = editor;
 
-  const characters = editor.storage.characterCount?.characters?.() ?? 0;
-  const words = editor.storage.characterCount?.words?.() ?? 0;
+  const characters = activeEditor.storage.characterCount?.characters?.() ?? 0;
+  const words = activeEditor.storage.characterCount?.words?.() ?? 0;
 
   function openAiImagePrompt() {
-    insertPosRef.current = editor.state.selection.from;
+    insertPosRef.current = activeEditor.state.selection.from;
     setAiError("");
     setAiPrompt("");
     setAiAlt("");
@@ -603,8 +604,8 @@ export function RichTextEditor({
       const alt = String(data.asset?.alt || aiAlt.trim() || prompt);
       if (!url) throw new Error("Generation returned no image URL.");
 
-      const pos = insertPosRef.current ?? editor.state.selection.from;
-      editor
+      const pos = insertPosRef.current ?? activeEditor.state.selection.from;
+      activeEditor
         .chain()
         .focus()
         .insertContentAt(pos, {
@@ -631,14 +632,14 @@ export function RichTextEditor({
       }}
     >
       <Toolbar
-        editor={editor}
+        editor={activeEditor}
         fullscreen={fullscreen}
         onToggleFullscreen={() => setFullscreen((value) => !value)}
         onRequestMedia={onRequestMedia}
         onRequestAiImage={openAiImagePrompt}
         aiGenerating={aiGenerating}
       />
-      <EditorContent editor={editor} className="rich-editor-surface" />
+      <EditorContent editor={activeEditor} className="rich-editor-surface" />
       <div className="rich-editor-footer">
         <span>{characters} characters</span>
         <span>{words} words</span>
