@@ -11,12 +11,21 @@ function localeDocId(postId: string, locale: Locale) {
 }
 
 /** Firestore rejects explicit `undefined` field values; drop them before writing. */
-function stripUndefined<T extends Record<string, unknown>>(value: T): T {
-  const result = {} as T;
-  for (const key of Object.keys(value) as (keyof T)[]) {
-    if (value[key] !== undefined) result[key] = value[key];
+function stripUndefined(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value
+      .filter((item) => item !== undefined)
+      .map((item) => stripUndefined(item));
   }
-  return result;
+  if (value && typeof value === "object" && !(value instanceof Date)) {
+    const result: Record<string, unknown> = {};
+    for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
+      if (entry === undefined) continue;
+      result[key] = stripUndefined(entry);
+    }
+    return result;
+  }
+  return value;
 }
 
 function mapLegacyBlogPost(id: string, data: FirebaseFirestore.DocumentData, locale: Locale): { shared: PostShared; locale: PostLocale } {
@@ -231,20 +240,26 @@ export async function upsertPostLocale(input: {
     updatedBy: input.shared.updatedBy,
   };
 
+  const cleanShared = stripUndefined(sharedPayload) as PostShared;
+  const cleanLocale = stripUndefined(localePayload) as PostLocale;
+
   const batch = db.batch();
-  batch.set(sharedRef, stripUndefined(sharedPayload), { merge: true });
+  batch.set(sharedRef, cleanShared, { merge: true });
   batch.set(
     db.collection(COLLECTIONS.postLocales).doc(localePayload.id),
-    stripUndefined(localePayload),
+    cleanLocale,
     { merge: true },
   );
-  batch.set(db.collection(COLLECTIONS.postRevisions).doc(), {
-    postId: input.postId,
-    locale: input.locale.locale,
-    snapshot: localePayload,
-    createdAt: now,
-    createdBy: input.shared.updatedBy,
-  });
+  batch.set(
+    db.collection(COLLECTIONS.postRevisions).doc(),
+    stripUndefined({
+      postId: input.postId,
+      locale: input.locale.locale,
+      snapshot: cleanLocale,
+      createdAt: now,
+      createdBy: input.shared.updatedBy,
+    }) as Record<string, unknown>,
+  );
   await batch.commit();
-  return { shared: sharedPayload, locale: localePayload };
+  return { shared: cleanShared, locale: cleanLocale };
 }
