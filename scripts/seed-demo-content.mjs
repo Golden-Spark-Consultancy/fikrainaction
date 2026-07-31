@@ -15,17 +15,17 @@ function init() {
 }
 
 const categories = [
-  { id: "artificial-intelligence", ar: "الذكاء الاصطناعي", en: "Artificial Intelligence" },
-  { id: "automation", ar: "الأتمتة", en: "Automation" },
-  { id: "programming", ar: "البرمجة", en: "Programming" },
-  { id: "hardware", ar: "الأجهزة", en: "Hardware" },
-  { id: "software", ar: "البرمجيات", en: "Software" },
-  { id: "arduino", ar: "أردوينو", en: "Arduino" },
-  { id: "raspberry-pi", ar: "راسبيري باي", en: "Raspberry Pi" },
-  { id: "esp32", ar: "ESP32", en: "ESP32" },
-  { id: "cybersecurity", ar: "الأمن السيبراني", en: "Cybersecurity" },
-  { id: "tutorials", ar: "الشروحات", en: "Tutorials" },
-  { id: "reviews", ar: "المراجعات", en: "Reviews" },
+  { id: "artificial-intelligence", ar: "الذكاء الاصطناعي", en: "Artificial Intelligence", parentId: null, icon: "ai", showInNav: true },
+  { id: "automation", ar: "الأتمتة", en: "Automation", parentId: "artificial-intelligence", icon: "automation", showInNav: true },
+  { id: "software", ar: "البرمجيات", en: "Software", parentId: null, icon: "software", showInNav: true },
+  { id: "programming", ar: "البرمجة", en: "Programming", parentId: "software", icon: "programming", showInNav: true },
+  { id: "hardware", ar: "الأجهزة", en: "Hardware", parentId: null, icon: "hardware", showInNav: true },
+  { id: "arduino", ar: "أردوينو", en: "Arduino", parentId: "hardware", icon: "arduino", showInNav: true },
+  { id: "raspberry-pi", ar: "راسبيري باي", en: "Raspberry Pi", parentId: "hardware", icon: "raspberry-pi", showInNav: true },
+  { id: "esp32", ar: "ESP32", en: "ESP32", parentId: "hardware", icon: "esp32", showInNav: true },
+  { id: "tutorials", ar: "الشروحات", en: "Tutorials", parentId: null, icon: "tutorials", showInNav: true },
+  { id: "reviews", ar: "المراجعات", en: "Reviews", parentId: "tutorials", icon: "reviews", showInNav: true },
+  { id: "cybersecurity", ar: "الأمن السيبراني", en: "Cybersecurity", parentId: null, icon: "folder", showInNav: false },
 ];
 
 const demoContent = {
@@ -55,8 +55,11 @@ async function main() {
       categories.forEach((cat, index) => {
         batch.set(db.collection("categories").doc(cat.id), {
           id: cat.id,
-          parentId: null,
+          parentId: cat.parentId,
           order: index,
+          showInNav: cat.showInNav !== false,
+          icon: cat.icon || cat.id,
+          enabled: true,
           locales: {
             ar: { name: cat.ar, slug: cat.id, description: cat.ar },
             en: { name: cat.en, slug: cat.id, description: cat.en },

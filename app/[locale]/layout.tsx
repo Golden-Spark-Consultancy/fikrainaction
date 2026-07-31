@@ -6,6 +6,10 @@ import {
   LOCALES,
   type Locale,
 } from "../../lib/i18n/config";
+import {
+  listCategories,
+  mergeCategoriesIntoHeaderMenu,
+} from "../../lib/cms/categories";
 import { getMenu } from "../../lib/cms/settings";
 import { SiteChrome } from "../components/SiteChrome";
 
@@ -23,10 +27,12 @@ export default async function LocaleLayout({
   const { locale: raw } = await params;
   if (!isLocale(raw)) notFound();
   const locale = raw as Locale;
-  const [headerMenu, footerMenu] = await Promise.all([
+  const [headerMenuRaw, footerMenu, categories] = await Promise.all([
     getMenu("header"),
     getMenu("footer"),
+    listCategories().catch(() => []),
   ]);
+  const headerMenu = mergeCategoriesIntoHeaderMenu(headerMenuRaw, categories);
 
   return (
     <div

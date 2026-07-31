@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { firebaseAuthorizedFetch } from "../../../lib/firebase/api";
-import type { ContentStatus, Locale } from "../../../lib/types/cms";
+import type { CategoryDoc, ContentStatus, Locale } from "../../../lib/types/cms";
 import { RichTextEditor } from "../../components/RichTextEditor";
 
 type PostListItem = {
@@ -43,7 +43,7 @@ type EditorState = {
   commentsEnabled: boolean;
   isAffiliateContent: boolean;
   affiliateDisclosure: string;
-  categoryIds: string;
+  categoryIds: string[];
   tagIds: string;
   relatedPostIds: string;
   thumbnailMediaId: string;
@@ -86,7 +86,7 @@ function blankEditor(locale: Locale, seed?: Partial<EditorState>): EditorState {
     commentsEnabled: true,
     isAffiliateContent: false,
     affiliateDisclosure: "",
-    categoryIds: "",
+    categoryIds: [],
     tagIds: "",
     relatedPostIds: "",
     thumbnailMediaId: "",
@@ -151,7 +151,7 @@ function buildEditorState(
     commentsEnabled: shared.commentsEnabled !== false,
     isAffiliateContent: Boolean(shared.isAffiliateContent),
     affiliateDisclosure: String(affiliateDisclosureOverride[locale] || ""),
-    categoryIds: ((shared.categoryIds as string[]) || []).join(", "),
+    categoryIds: ((shared.categoryIds as string[]) || []).filter(Boolean),
     tagIds: ((shared.tagIds as string[]) || []).join(", "),
     relatedPostIds: ((shared.relatedPostIds as string[]) || []).join(", "),
     thumbnailMediaId: String(shared.thumbnailMediaId || ""),
@@ -182,6 +182,7 @@ export function PostsPanel({
 
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [revisions, setRevisions] = useState<RevisionEntry[]>([]);
+  const [categories, setCategories] = useState<CategoryDoc[]>([]);
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -208,6 +209,15 @@ export function PostsPanel({
       setLoadError(error instanceof Error ? error.message : "Unable to load posts"),
     );
   }, [loadList]);
+
+  useEffect(() => {
+    void firebaseAuthorizedFetch("/api/cms/categories")
+      .then(async (res) => {
+        const data = await res.json();
+        if (res.ok) setCategories(data.categories || []);
+      })
+      .catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     if (!initialPostId || openedInitialRef.current) return;
@@ -373,7 +383,7 @@ export function PostsPanel({
             canonicalUrl: state.canonicalUrl,
             noIndex: state.noIndex,
           },
-          categoryIds: splitCsv(state.categoryIds),
+          categoryIds: state.categoryIds,
           tagIds: splitCsv(state.tagIds),
           relatedPostIds: splitCsv(state.relatedPostIds),
           featured: state.featured,
@@ -727,13 +737,54 @@ export function PostsPanel({
 
           <h3 style={{ marginTop: 28 }}>Organization</h3>
           <div className="form-grid">
-            <label>
-              Category IDs (comma-separated)
-              <input
-                value={editor.categoryIds}
-                onChange={(e) => setEditor({ ...editor, categoryIds: e.target.value, dirty: true })}
-              />
-            </label>
+            <div className="full-field">
+              <span style={{ display: "block", marginBottom: 8, fontWeight: 650 }}>Categories</span>
+              {categories.length === 0 ? (
+                <p className="admin-section-intro">
+                  No categories yet. Create them in the Categories admin screen.
+                </p>
+              ) : (
+                <div className="category-picker">
+                  {categories
+                    .filter((cat) => !cat.parentId)
+                    .map((root) => {
+                      const children = categories.filter((cat) => cat.parentId === root.id);
+                      return (
+                        <div key={root.id} className="category-picker-group">
+                          <label className="check-label">
+                            <input
+                              type="checkbox"
+                              checked={editor.categoryIds.includes(root.id)}
+                              onChange={(e) => {
+                                const next = e.target.checked
+                                  ? [...editor.categoryIds, root.id]
+                                  : editor.categoryIds.filter((id) => id !== root.id);
+                                setEditor({ ...editor, categoryIds: next, dirty: true });
+                              }}
+                            />{" "}
+                            <strong>{root.locales.en?.name || root.locales.ar?.name || root.id}</strong>
+                          </label>
+                          {children.map((child) => (
+                            <label key={child.id} className="check-label category-picker-child">
+                              <input
+                                type="checkbox"
+                                checked={editor.categoryIds.includes(child.id)}
+                                onChange={(e) => {
+                                  const next = e.target.checked
+                                    ? [...editor.categoryIds, child.id]
+                                    : editor.categoryIds.filter((id) => id !== child.id);
+                                  setEditor({ ...editor, categoryIds: next, dirty: true });
+                                }}
+                              />{" "}
+                              {child.locales.en?.name || child.locales.ar?.name || child.id}
+                            </label>
+                          ))}
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
             <label>
               Tag IDs (comma-separated)
               <input

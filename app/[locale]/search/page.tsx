@@ -8,6 +8,7 @@ import {
 import { createTranslator } from "../../../lib/i18n/translate";
 import { buildPageMetadata } from "../../../lib/seo/metadata";
 import { createSearchProvider } from "../../../lib/cms/search";
+import { PostCard } from "../../components/PostCard";
 import { SearchBox } from "../../components/SearchBox";
 
 export async function generateMetadata({
@@ -76,13 +77,16 @@ export default async function SearchPage({
                   ? localizedPath(locale, `/tools/${hit.slug}`)
                   : localizedPath(locale, `/blog/${hit.slug}`);
             return (
-              <article className="post-card" key={`${hit.type}-${hit.id}`}>
-                <p className="micro-label">{hit.type}</p>
-                <h2>
-                  <Link href={href}>{hit.title}</Link>
-                </h2>
-                <p>{hit.excerpt}</p>
-              </article>
+              <PostCard
+                key={`${hit.type}-${hit.id}`}
+                href={href}
+                title={hit.title}
+                thumbnailUrl={hit.type === "post" ? hit.thumbnailUrl : undefined}
+                thumbnailAlt={hit.title}
+                meta={hit.type}
+                excerpt={hit.excerpt}
+                readMoreLabel={`${t("common.readMore")} →`}
+              />
             );
           })}
         </div>

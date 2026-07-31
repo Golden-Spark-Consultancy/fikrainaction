@@ -2,6 +2,7 @@ import { getAdminFirestore } from "../firebase/admin";
 import { normalizeArabicSearchText, type Locale } from "../i18n/config";
 import type { PostLocale } from "../types/cms";
 import { COLLECTIONS } from "./collections";
+import type { PostShared } from "../types/cms";
 import { listPublishedPosts } from "./posts";
 import { categories, posts as seedPosts, tools } from "../data";
 
@@ -13,6 +14,7 @@ export type SearchHit = {
   locale: Locale;
   type: "post" | "page" | "category" | "tag" | "author" | "tool";
   score: number;
+  thumbnailUrl?: string;
 };
 
 export interface SearchProvider {
@@ -47,8 +49,19 @@ class FirestoreSearchProvider implements SearchProvider {
         .limit(100)
         .get();
 
-      for (const doc of snap.docs) {
-        const p = doc.data() as PostLocale;
+      const locales = snap.docs.map((doc) => doc.data() as PostLocale);
+      const postIds = [...new Set(locales.map((p) => p.postId))];
+      const sharedSnaps = await Promise.all(
+        postIds.map((id) => db.collection(COLLECTIONS.posts).doc(id).get()),
+      );
+      const thumbs = new Map(
+        sharedSnaps.map((doc) => [
+          doc.id,
+          doc.exists ? String((doc.data() as PostShared).thumbnailUrl || "") : "",
+        ]),
+      );
+
+      for (const p of locales) {
         const hay = normalizeArabicSearchText(`${p.title} ${p.excerpt} ${p.searchText ?? ""}`);
         const score = scoreMatch(hay, normalized);
         if (score > 0) {
@@ -60,6 +73,7 @@ class FirestoreSearchProvider implements SearchProvider {
             locale: p.locale,
             type: "post",
             score,
+            thumbnailUrl: thumbs.get(p.postId) || undefined,
           });
         }
       }
@@ -77,6 +91,7 @@ class FirestoreSearchProvider implements SearchProvider {
             locale: p.locale,
             type: "post",
             score,
+            thumbnailUrl: p.thumbnailUrl,
           });
         }
       }

@@ -120,6 +120,11 @@ export type CategoryDoc = {
   id: string;
   parentId?: string | null;
   order: number;
+  /** Shown in the public navbar when true (default true). */
+  showInNav?: boolean;
+  /** Key for NavIcon / UI glyph. */
+  icon?: string;
+  enabled?: boolean;
   thumbnailMediaId?: string;
   locales: Partial<
     Record<

@@ -11,6 +11,7 @@ import { createTranslator } from "../../lib/i18n/translate";
 import { buildPageMetadata } from "../../lib/seo/metadata";
 import { JsonLd, organizationJsonLd, websiteJsonLd } from "../../lib/seo/jsonld";
 import { notFound } from "next/navigation";
+import { PostCard } from "../components/PostCard";
 
 export async function generateMetadata({
   params,
@@ -41,13 +42,21 @@ export default async function LocaleHomePage({
   const published = await listPublishedPosts(locale, { limit: 6 }).catch(() => []);
   const latest =
     published.length > 0
-      ? published
+      ? published.map((p) => ({
+          slug: p.slug,
+          title: p.title,
+          excerpt: p.excerpt,
+          readingTimeMinutes: p.readingTimeMinutes || 5,
+          thumbnailUrl: p.thumbnailUrl as string | undefined,
+          thumbnailAlt: (p.thumbnailAlt || p.title) as string,
+        }))
       : posts.map((p) => ({
-          postId: p.slug,
           slug: p.slug,
           title: p.title,
           excerpt: p.excerpt,
           readingTimeMinutes: Number(p.readTime) || 5,
+          thumbnailUrl: undefined as string | undefined,
+          thumbnailAlt: p.title,
         }));
   const featuredTool = tools[0];
 
@@ -151,21 +160,18 @@ export default async function LocaleHomePage({
                 </div>
                 <div className="post-grid">
                   {latest.map((post) => (
-                    <article className="post-card" key={post.slug}>
-                      <p className="micro-label">
-                        {t("common.readTime", {
-                          minutes: "readingTimeMinutes" in post
-                            ? post.readingTimeMinutes
-                            : 5,
-                        })}
-                      </p>
-                      <h3>
-                        <Link href={localizedPath(locale, `/blog/${post.slug}`)}>
-                          {post.title}
-                        </Link>
-                      </h3>
-                      <p>{post.excerpt}</p>
-                    </article>
+                    <PostCard
+                      key={post.slug}
+                      href={localizedPath(locale, `/blog/${post.slug}`)}
+                      title={post.title}
+                      thumbnailUrl={post.thumbnailUrl}
+                      thumbnailAlt={post.thumbnailAlt}
+                      meta={t("common.readTime", {
+                        minutes: post.readingTimeMinutes,
+                      })}
+                      excerpt={post.excerpt}
+                      readMoreLabel={`${t("common.readMore")} →`}
+                    />
                   ))}
                 </div>
               </section>

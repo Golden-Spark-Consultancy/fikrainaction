@@ -7,6 +7,8 @@ import { ToolsPanel } from "./ToolsPanel";
 
 type TaxItem = {
   id: string;
+  parentId?: string | null;
+  showInNav?: boolean;
   locales?: {
     ar?: { name?: string; slug?: string };
     en?: { name?: string; slug?: string };
@@ -80,7 +82,6 @@ export function SiteConfigPanel() {
     await load();
   }
 
-  const [newCat, setNewCat] = useState({ nameAr: "", nameEn: "", slugAr: "", slugEn: "" });
   const [newTag, setNewTag] = useState({ nameAr: "", nameEn: "", slugAr: "", slugEn: "" });
 
   return (
@@ -387,6 +388,10 @@ export function SiteConfigPanel() {
           <div className="admin-management-layout" style={{ marginTop: 16 }}>
             <section className="admin-panel" style={{ margin: 0 }}>
               <h3>Categories</h3>
+              <p className="admin-section-intro">
+                Categories, subcategories, navbar visibility, and hierarchy are managed in the dedicated{" "}
+                <strong>Categories</strong> screen in the admin sidebar.
+              </p>
               <div className="content-card-list">
                 {categories.map((cat) => (
                   <article key={cat.id}>
@@ -394,19 +399,12 @@ export function SiteConfigPanel() {
                       <strong>{cat.locales?.en?.name || cat.locales?.ar?.name || cat.id}</strong>
                       <small>
                         ar: {cat.locales?.ar?.slug} · en: {cat.locales?.en?.slug}
+                        {cat.parentId ? ` · parent: ${cat.parentId}` : ""}
+                        {cat.showInNav === false ? " · hidden from nav" : ""}
                       </small>
                     </div>
                   </article>
                 ))}
-              </div>
-              <div className="form-grid" style={{ marginTop: 12 }}>
-                <label>Name AR<input value={newCat.nameAr} onChange={(e) => setNewCat({ ...newCat, nameAr: e.target.value })} /></label>
-                <label>Name EN<input value={newCat.nameEn} onChange={(e) => setNewCat({ ...newCat, nameEn: e.target.value })} /></label>
-                <label>Slug AR<input value={newCat.slugAr} onChange={(e) => setNewCat({ ...newCat, slugAr: e.target.value })} /></label>
-                <label>Slug EN<input value={newCat.slugEn} onChange={(e) => setNewCat({ ...newCat, slugEn: e.target.value })} /></label>
-                <button type="button" className="generate-button" onClick={() => void saveTaxonomy("category", newCat)}>
-                  Add category
-                </button>
               </div>
             </section>
             <section className="admin-panel" style={{ margin: 0 }}>

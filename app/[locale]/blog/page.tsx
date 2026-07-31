@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import {
   isLocale,
   localizedPath,
@@ -9,6 +8,7 @@ import { createTranslator } from "../../../lib/i18n/translate";
 import { buildPageMetadata } from "../../../lib/seo/metadata";
 import { listPublishedPosts } from "../../../lib/cms/posts";
 import { posts as seedPosts } from "../../../lib/data";
+import { PostCard } from "../../components/PostCard";
 
 export async function generateMetadata({
   params,
@@ -38,13 +38,20 @@ export default async function BlogIndexPage({
   const published = await listPublishedPosts(locale, { limit: 24 }).catch(() => []);
   const items =
     published.length > 0
-      ? published
+      ? published.map((p) => ({
+          slug: p.slug,
+          title: p.title,
+          excerpt: p.excerpt,
+          thumbnailUrl: p.thumbnailUrl,
+          thumbnailAlt: p.thumbnailAlt || p.title,
+        }))
       : locale === "en"
         ? seedPosts.map((p) => ({
             slug: p.slug,
             title: p.title,
             excerpt: p.excerpt,
-            readingTimeMinutes: 5,
+            thumbnailUrl: undefined as string | undefined,
+            thumbnailAlt: p.title,
           }))
         : [];
 
@@ -57,17 +64,15 @@ export default async function BlogIndexPage({
       ) : (
         <div className="post-grid" style={{ marginTop: 32 }}>
           {items.map((post) => (
-            <article className="post-card" key={post.slug}>
-              <h2>
-                <Link href={localizedPath(locale, `/blog/${post.slug}`)}>
-                  {post.title}
-                </Link>
-              </h2>
-              <p>{post.excerpt}</p>
-              <Link href={localizedPath(locale, `/blog/${post.slug}`)}>
-                {t("common.readMore")} →
-              </Link>
-            </article>
+            <PostCard
+              key={post.slug}
+              href={localizedPath(locale, `/blog/${post.slug}`)}
+              title={post.title}
+              thumbnailUrl={post.thumbnailUrl}
+              thumbnailAlt={post.thumbnailAlt}
+              excerpt={post.excerpt}
+              readMoreLabel={`${t("common.readMore")} →`}
+            />
           ))}
         </div>
       )}

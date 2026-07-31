@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { BulkAiPanel } from "./panels/BulkAiPanel";
+import { CategoriesPanel } from "./panels/CategoriesPanel";
 import { CommentsPanel } from "./panels/CommentsPanel";
 import { DashboardPanel } from "./panels/DashboardPanel";
 import { MediaLibraryPanel } from "./panels/MediaLibraryPanel";
@@ -14,6 +15,7 @@ type AdminView =
   | "dashboard"
   | "posts"
   | "bulk-ai"
+  | "categories"
   | "comments"
   | "media"
   | "site-config";
@@ -22,6 +24,7 @@ const NAV: { id: AdminView; label: string; icon: string }[] = [
   { id: "dashboard", label: "Dashboard", icon: "▣" },
   { id: "posts", label: "Posts", icon: "✎" },
   { id: "bulk-ai", label: "Bulk AI Blog Generator", icon: "✦" },
+  { id: "categories", label: "Categories", icon: "▤" },
   { id: "comments", label: "Comments", icon: "💬" },
   { id: "media", label: "Media Library", icon: "▧" },
   { id: "site-config", label: "Site Configuration", icon: "☰" },
@@ -31,6 +34,7 @@ const TITLES: Record<AdminView, string> = {
   dashboard: "Dashboard",
   posts: "Posts",
   "bulk-ai": "Bulk AI Blog Generator",
+  categories: "Categories",
   comments: "Comments",
   media: "Media Library",
   "site-config": "Site Configuration",
@@ -138,6 +142,7 @@ export function AdminStudio({
             }}
           />
         )}
+        {view === "categories" && <CategoriesPanel />}
         {view === "comments" && <CommentsPanel />}
         {view === "media" && <MediaLibraryPanel />}
         {view === "site-config" && <SiteConfigPanel />}

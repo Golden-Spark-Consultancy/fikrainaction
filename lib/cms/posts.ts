@@ -176,22 +176,55 @@ export async function getPostBySlug(locale: Locale, slug: string): Promise<{ sha
   return null;
 }
 
+/** Published locale row plus shared thumbnail fields for post grids. */
+export type PublishedPostSummary = PostLocale & {
+  thumbnailUrl?: string;
+  thumbnailAlt?: string;
+};
+
 export async function listPublishedPosts(
   locale: Locale,
   options: { limit?: number; categoryId?: string } = {},
-): Promise<PostLocale[]> {
+): Promise<PublishedPostSummary[]> {
   const limit = Math.min(options.limit ?? 12, 50);
   const db = await getAdminFirestore();
 
   try {
-    let q = db
+    const q = db
       .collection(COLLECTIONS.postLocales)
       .where("locale", "==", locale)
       .where("status", "==", "published")
       .orderBy("publishedAt", "desc")
-      .limit(limit);
+      .limit(options.categoryId ? Math.min(limit * 8, 200) : limit);
     const snap = await q.get();
-    if (!snap.empty) return snap.docs.map((d) => d.data() as PostLocale);
+    if (!snap.empty) {
+      let locales = snap.docs.map((d) => d.data() as PostLocale);
+      const postIds = [...new Set(locales.map((row) => row.postId))];
+      const sharedSnaps = await Promise.all(
+        postIds.map((id) => db.collection(COLLECTIONS.posts).doc(id).get()),
+      );
+      const sharedById = new Map(
+        sharedSnaps.map((doc) => [doc.id, doc.exists ? (doc.data() as PostShared) : null]),
+      );
+
+      if (options.categoryId) {
+        const allowed = new Set(
+          [...sharedById.entries()]
+            .filter(([, shared]) => (shared?.categoryIds || []).includes(options.categoryId!))
+            .map(([id]) => id),
+        );
+        locales = locales.filter((row) => allowed.has(row.postId)).slice(0, limit);
+      }
+
+      return locales.map((localeDoc) => {
+        const shared = sharedById.get(localeDoc.postId);
+        return {
+          ...localeDoc,
+          thumbnailUrl: shared?.thumbnailUrl || undefined,
+          thumbnailAlt: localeDoc.thumbnailAlt || localeDoc.title,
+        };
+      });
+    }
   } catch {
     /* fall back to legacy */
   }
@@ -204,9 +237,14 @@ export async function listPublishedPosts(
       .where("status", "==", "published")
       .limit(limit)
       .get();
-    return legacy.docs.map(
-      (d) => mapLegacyBlogPost(d.id, d.data() as FirebaseFirestore.DocumentData, "en").locale,
-    );
+    return legacy.docs.map((d) => {
+      const mapped = mapLegacyBlogPost(d.id, d.data() as FirebaseFirestore.DocumentData, "en");
+      return {
+        ...mapped.locale,
+        thumbnailUrl: mapped.shared.thumbnailUrl,
+        thumbnailAlt: mapped.locale.thumbnailAlt || mapped.locale.title,
+      };
+    });
   } catch {
     return [];
   }
