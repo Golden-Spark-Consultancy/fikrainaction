@@ -1,78 +1,63 @@
-# Fikra in Action
+# fikraInAction
 
-Fikra in Action is a full-stack affiliate content platform built with Next.js and prepared for Firebase App Hosting. It uses:
+Bilingual (Arabic / English) technology publication and CMS built on Next.js and Firebase.
 
-- Firebase App Hosting for the Next.js website and server routes
-- Cloud Firestore for landing pages, revisions, products, posts, and affiliate-click records
-- Cloud Storage for Firebase for validated page-image and video uploads
-- Firebase Authentication with email-and-password sign-in for the administration studio
-- Firebase custom claims for administrator authorization
-- Automatic product-image and official-site screenshot discovery through Microlink metadata
+**Brand name:** `fikraInAction` (do not translate or change capitalization)
 
-- Configured production project: `fikra-e47d9`
-- Configured administrator: `goldensparkbh@gmail.com`
-- Deployment repository: `Golden-Spark-Consultancy/fikrainaction`
+## Stack
 
-## Firebase setup
+- Next.js App Router + React + TypeScript
+- Tailwind CSS
+- Firebase Authentication, Firestore, Storage, App Hosting
+- Cloud Functions for scheduled publishing and secured comment flows
+- TipTap rich editor, Shiki highlighting, Prettier-based code formatting
+- Cookie-consent-gated analytics
 
-1. In the `fikra-e47d9` Firebase project, enable Cloud Firestore in Native mode.
-2. Enable Cloud Storage.
-3. Enable Email/Password as a Firebase Authentication provider and create the administrator user.
-4. Connect `Golden-Spark-Consultancy/fikrainaction` under **Firebase Console → App Hosting → Create backend**.
-5. Set the repository root to `/` and production branch to `main`.
-6. Deploy the included Firestore and Storage rules:
+Configured Firebase project: `fikra-e47d9`
 
-   ```bash
-   npx firebase-tools login
-   npx firebase-tools use fikra-e47d9
-npm run firebase:deploy:rules
-```
-
-If the administration studio reports `FIRESTORE_SETUP_REQUIRED`, open the project in Firebase Console, go to **Databases & Storage → Firestore**, click **Create database**, select Native mode and a location, then allow a few minutes for the API to become available.
-
-Firebase App Hosting supplies `FIREBASE_CONFIG` and `FIREBASE_WEBAPP_CONFIG` automatically. For local development, copy `.env.example` to `.env.local` and add the Web App configuration from Firebase Console.
-
-## Grant the first administrator
-
-`goldensparkbh@gmail.com` is accepted as the initial administrator after signing in through `/admin` with its Firebase email/password account. Additional administrators can be granted the custom claim after their Firebase Authentication users have been created:
-
-```bash
-gcloud auth application-default login
-npm run firebase:grant-admin -- administrator@example.com
-```
-
-The user must sign out and back in after the claim is added. Firestore, Storage, and the server routes all require the same `admin: true` claim for management operations.
-
-## Data model
-
-- `landingPages/{slug}` — published or draft generated pages
-- `landingPages/{slug}/revisions/{revisionId}` — immutable page revisions
-- `products/{productId}` — affiliate product catalogue
-- `blogPosts/{postId}` — editorial content
-- `affiliateClicks/{clickId}` — server-recorded outbound click events
-- `mediaAssets/{assetId}` — reusable metadata and download URLs for uploaded files
-- `media/{year}/{id}-{filename}` — Storage object path for uploaded media
-
-## Local development
+## Quick start
 
 ```bash
 npm install
 cp .env.example .env.local
+# Fill Firebase web config values (or rely on next.config fallbacks for local UI work)
 npm run firebase:emulators
 npm run dev
 ```
 
-For server-side local access, use Application Default Credentials or place a service-account JSON string in the uncommitted `FIREBASE_SERVICE_ACCOUNT_JSON` variable. Never commit service-account credentials.
+Open http://localhost:3000 — middleware sends `/` to `/ar` by default (or `/en` when `NEXT_LOCALE=en`).
 
-## Security
+## Scripts
 
-All Firestore and Storage operations go through authenticated server routes that verify the Firebase administrator claim. Client access is denied by the included rules, while the Firebase Admin SDK is controlled through IAM. Media uploads are validated as images or videos, limited to 20 MB, stored in Firebase Storage, and indexed in Firestore for reuse in the content studio.
+| Command | Purpose |
+|---|---|
+| `npm run dev` | Next.js development server |
+| `npm run build:next` | Production build |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm run lint` | ESLint |
+| `npm test` | Unit / config tests |
+| `npm run migrate:dry-run` | Preview blogPosts → posts/postLocales migration |
+| `npm run migrate` | Apply migration (does not delete legacy docs) |
+| `npm run seed:dry-run` / `npm run seed` | Safe demo seed (skips existing data) |
+| `npm run firebase:emulators` | Auth, Firestore, Storage, Functions emulators |
+| `npm run firebase:set-role -- user@example.com owner` | Assign CMS role custom claims |
+| `npm run firebase:deploy:rules` | Deploy Firestore/Storage rules + indexes |
+| `npm run firebase:deploy:functions` | Build and deploy Cloud Functions |
 
-## Deployment files
+## Documentation
 
-- `apphosting.yaml` configures the Firebase App Hosting runtime.
-- `firebase.json` connects the Firestore indexes/rules, Storage rules, and local emulators.
-- `firestore.rules` and `storage.rules` contain the production access policy.
-- `.env.example` documents local Firebase Web App variables.
+- [FIREBASE_SETUP.md](./FIREBASE_SETUP.md)
+- [DEPLOYMENT.md](./DEPLOYMENT.md)
+- [MIGRATION.md](./MIGRATION.md)
+- [CMS_USER_GUIDE.md](./CMS_USER_GUIDE.md)
+- [DATA_MODEL.md](./DATA_MODEL.md)
+- [SECURITY.md](./SECURITY.md)
 
-The `.openai/hosting.json` file remains only for the existing ChatGPT Sites preview and contains no production database binding.
+## Locales
+
+- `/ar/...` — Arabic, `dir=rtl`, Cairo
+- `/en/...` — English, `dir=ltr`, Inter
+- `/go/{slug}` — affiliate redirects (unprefixed, preserved)
+- `/admin` — CMS (unprefixed)
+
+Legacy unprefixed public URLs permanently redirect to the matching locale path.

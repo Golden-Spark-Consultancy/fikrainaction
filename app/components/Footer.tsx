@@ -1,15 +1,71 @@
 import Image from "next/image";
 import Link from "next/link";
-import { categories } from "../../lib/data";
+import { localizedPath, type Locale } from "../../lib/i18n/config";
+import { createTranslator } from "../../lib/i18n/translate";
+import type { MenuDoc } from "../../lib/types/cms";
 
-export function Footer() {
-  return <footer className="site-footer">
-    <div className="container footer-grid">
-      <div><Link className="footer-logo-link" href="/" aria-label="Fikra in Action home"><Image className="footer-logo" src="/fikra-in-action-logo.png" alt="Fikra in Action" width={1170} height={607} unoptimized /></Link><p>Helping you move from curiosity to confident action.</p></div>
-      <div><strong>Categories</strong>{categories.map((category) => <Link key={category.slug} href={`/category/${category.slug}`}>{category.name}</Link>)}</div>
-      <div><strong>About</strong><Link href="/about">About us</Link><Link href="/editorial-policy">Editorial policy</Link><Link href="/review-methodology">Review methodology</Link><Link href="/contact">Contact</Link></div>
-      <div><strong>Legal</strong><Link href="/affiliate-disclosure">Affiliate disclosure</Link><Link href="/privacy">Privacy</Link><Link href="/terms">Terms of Service</Link><Link href="/cookies">Cookies</Link></div>
-    </div>
-    <div className="container footer-bottom"><span>© 2026 Fikra in Action</span><span>Some links may earn us a commission at no extra cost to you.</span></div>
-  </footer>;
+export function Footer({ locale, menu }: { locale: Locale; menu?: MenuDoc }) {
+  const t = createTranslator(locale);
+  const year = new Date().getFullYear();
+  const items = (menu?.items ?? []).filter((item) => item.enabled);
+
+  return (
+    <footer className="site-footer">
+      <div className="container footer-grid">
+        <div>
+          <Link
+            className="footer-logo-link"
+            href={localizedPath(locale)}
+            aria-label="fikraInAction home"
+          >
+            <Image
+              className="footer-logo"
+              src="/fikra-in-action-logo.png"
+              alt="fikraInAction"
+              width={1170}
+              height={607}
+              unoptimized
+            />
+          </Link>
+          <p>{t("tagline")}</p>
+        </div>
+        <div>
+          <strong>{t("nav.categories")}</strong>
+          <Link href={localizedPath(locale, "/category/artificial-intelligence")}>
+            {t("nav.ai")}
+          </Link>
+          <Link href={localizedPath(locale, "/category/programming")}>
+            {t("nav.programming")}
+          </Link>
+          <Link href={localizedPath(locale, "/category/hardware")}>
+            {t("nav.hardware")}
+          </Link>
+          <Link href={localizedPath(locale, "/blog")}>{t("nav.blog")}</Link>
+        </div>
+        <div>
+          <strong>{t("nav.about")}</strong>
+          <Link href={localizedPath(locale, "/about")}>{t("nav.about")}</Link>
+          <Link href={localizedPath(locale, "/contact")}>{t("nav.contact")}</Link>
+          <Link href={localizedPath(locale, "/tools")}>{t("nav.tools")}</Link>
+        </div>
+        <div>
+          <strong>{t("common.footer.privacy")}</strong>
+          {items.map((item) => (
+            <Link
+              key={item.id}
+              href={localizedPath(locale, item.href || "/")}
+            >
+              {item.label[locale] || item.label.en || item.id}
+            </Link>
+          ))}
+        </div>
+      </div>
+      <div className="container footer-bottom">
+        <span>
+          © {year} fikraInAction — {t("common.footer.rights")}
+        </span>
+        <span>{t("common.affiliateDisclosure")}</span>
+      </div>
+    </footer>
+  );
 }

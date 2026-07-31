@@ -1,31 +1,57 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import { SiteChrome } from "./components/SiteChrome";
+import { Cairo, Inter, JetBrains_Mono } from "next/font/google";
 import { TagManagerNoScript, Tracking } from "./components/Tracking";
 import "./globals.css";
 
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+const cairo = Cairo({
+  variable: "--font-cairo",
+  subsets: ["arabic", "latin"],
+  display: "swap",
+});
+
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+const jetbrains = JetBrains_Mono({
+  variable: "--font-mono",
+  subsets: ["latin"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
-  title: { default: "Fikra in Action — Discover. Compare. Act.", template: "%s | Fikra in Action" },
-  description: "Practical reviews, comparisons, and guides for AI tools, software, and online services.",
-  metadataBase: new URL("https://fikra-e47d9.web.app"),
-  openGraph: { title: "Fikra in Action", description: "Discover practical tools. Compare smarter. Take action.", type: "website" },
-  other: { "codex-preview": "development" },
+  title: {
+    default: "fikraInAction — From idea to action",
+    template: "%s | fikraInAction",
+  },
+  description:
+    "Bilingual technology publication covering AI, programming, hardware, IoT, and practical tutorials.",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "https://fikrainaction.com",
+  ),
+  openGraph: {
+    title: "fikraInAction",
+    description: "From idea to action in technology.",
+    type: "website",
+    siteName: "fikraInAction",
+  },
   icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><head>
-    {/* Google tag (gtag.js) */}
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHBQM8LF95" />
-    <script dangerouslySetInnerHTML={{ __html: `
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-
-      gtag('config', 'G-YHBQM8LF95');
-    ` }} />
-  </head><body className={`${geistSans.variable} ${geistMono.variable}`}><TagManagerNoScript /><Tracking /><SiteChrome>{children}</SiteChrome></body></html>;
+export default function RootLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <html lang="ar" dir="rtl" suppressHydrationWarning>
+      <body
+        className={`${cairo.variable} ${inter.variable} ${jetbrains.variable}`}
+      >
+        <TagManagerNoScript />
+        <Tracking />
+        {children}
+      </body>
+    </html>
+  );
 }

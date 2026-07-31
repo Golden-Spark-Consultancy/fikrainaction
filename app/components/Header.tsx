@@ -2,40 +2,85 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
-import { categories } from "../../lib/data";
+import { useEffect, useState } from "react";
+import { localizedPath, type Locale } from "../../lib/i18n/config";
+import { createTranslator } from "../../lib/i18n/translate";
+import type { MenuDoc } from "../../lib/types/cms";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 
-export function Header() {
+export function Header({
+  locale,
+  menu,
+}: {
+  locale: Locale;
+  menu?: MenuDoc;
+}) {
   const [open, setOpen] = useState(false);
+  const t = createTranslator(locale);
+  const items = (menu?.items ?? []).filter((item) => item.enabled);
+
+  useEffect(() => {
+    setOpen(false);
+  }, [locale]);
 
   return (
     <header className="site-header">
       <div className="container nav-wrap">
-        <Link className="navbar-brand" href="/" aria-label="Fikra in Action home">
+        <Link
+          className="navbar-brand"
+          href={localizedPath(locale)}
+          aria-label={`${t("brand")} home`}
+        >
           <Image
             className="nav-logo"
             src="/fikra-in-action-logo.png"
-            alt="Fikra in Action"
+            alt="fikraInAction"
             width={1170}
             height={607}
             priority
             unoptimized
           />
         </Link>
-        <button className="mobile-toggle" onClick={() => setOpen(!open)} aria-expanded={open} aria-label="Toggle navigation">
-          <span /><span /><span />
+        <button
+          className="mobile-toggle"
+          onClick={() => setOpen(!open)}
+          aria-expanded={open}
+          aria-label="Toggle navigation"
+        >
+          <span />
+          <span />
+          <span />
         </button>
         <nav className={open ? "nav-links open" : "nav-links"} aria-label="Main navigation">
-          <div className="nav-dropdown"><button type="button">Categories <span>⌄</span></button><div>{categories.map((category) => <Link key={category.slug} href={`/category/${category.slug}`}>{category.name}</Link>)}</div></div>
-          {categories.map((category) => <Link className="category-direct" key={category.slug} href={`/category/${category.slug}`}>{category.name}</Link>)}
-          <Link href="/comparisons">Comparisons</Link>
-          <Link href="/tutorials">Tutorials</Link>
-          <Link href="/deals">Deals</Link>
-          <Link href="/blog">Blog</Link>
+          {items.slice(0, 8).map((item) => (
+            <Link
+              key={item.id}
+              href={
+                item.external
+                  ? item.href || "#"
+                  : localizedPath(locale, item.href || "/")
+              }
+              target={item.external ? "_blank" : undefined}
+              rel={item.external ? "noopener noreferrer" : undefined}
+            >
+              {item.label[locale] || item.label.en || item.label.ar || item.id}
+            </Link>
+          ))}
+          <Link href={localizedPath(locale, "/blog")}>{t("nav.blog")}</Link>
+          <Link href={localizedPath(locale, "/search")}>{t("nav.search")}</Link>
         </nav>
         <div className="nav-actions">
-          <Link className="search-button" href="/tools" aria-label="Search">⌕</Link>
-          <Link className="nav-cta" href="/tools">Find a tool <span>→</span></Link>
+          <LanguageSwitcher locale={locale} />
+          <Link
+            className="search-button"
+            href={localizedPath(locale, "/search")}
+            aria-label={t("nav.search")}
+          >
+            ⌕
+          </Link>
+          <Link className="nav-cta" href={localizedPath(locale, "/tools")}>
+            {t("nav.tools")} <span aria-hidden="true">→</span>
+          </Link>
         </div>
       </div>
     </header>

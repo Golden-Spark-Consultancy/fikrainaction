@@ -6,6 +6,11 @@ runConfig:
   memoryMiB: 512
 
 env:
+  - variable: NEXT_PUBLIC_SITE_URL
+    value: https://fikrainaction.com
+    availability:
+      - BUILD
+      - RUNTIME
   - variable: FIREBASE_ADMIN_EMAILS
     value: goldensparkbh@gmail.com
     availability:

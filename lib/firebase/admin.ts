@@ -30,7 +30,7 @@ async function createAdminApp() {
   return initializeApp(options);
 }
 
-async function getAdminApp() {
+export async function getAdminApp() {
   adminAppPromise ??= createAdminApp();
   return adminAppPromise;
 }
@@ -60,7 +60,15 @@ export async function requireFirebaseAdmin(request: Request): Promise<DecodedIdT
         .filter(Boolean),
     );
     const allowedByEmail = Boolean(decoded.email && allowedEmails.has(decoded.email.toLowerCase()));
-    if (decoded.admin !== true && !allowedByEmail) throw new FirebaseAccessError("This account is not authorized to manage the site.", 403);
+    const role = typeof decoded.role === "string" ? decoded.role : "";
+    const allowedByRole =
+      decoded.admin === true ||
+      role === "owner" ||
+      role === "administrator" ||
+      role === "editor";
+    if (!allowedByRole && !allowedByEmail) {
+      throw new FirebaseAccessError("This account is not authorized to manage the site.", 403);
+    }
     return decoded;
   } catch (error) {
     if (error instanceof FirebaseAccessError) throw error;
