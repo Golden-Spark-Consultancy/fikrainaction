@@ -68,6 +68,10 @@ function toDraft(cat: CategoryDoc): Draft {
   };
 }
 
+function displayName(cat: CategoryDoc) {
+  return cat.locales.en?.name || cat.locales.ar?.name || cat.id;
+}
+
 export function CategoriesPanel() {
   const [categories, setCategories] = useState<CategoryDoc[]>([]);
   const [draft, setDraft] = useState<Draft>(emptyDraft());
@@ -102,7 +106,6 @@ export function CategoriesPanel() {
   }, []);
 
   useEffect(() => {
-    // First open: ensure navbar taxonomy exists in Firestore.
     void load(true);
   }, [load]);
 
@@ -195,205 +198,302 @@ export function CategoriesPanel() {
   }
 
   const parentOptions = roots.filter((cat) => cat.id !== editingId);
+  const navCount = categories.filter((cat) => cat.showInNav !== false && cat.enabled !== false).length;
 
   return (
-    <section className="admin-panel">
-      <div className="panel-title">
+    <div className="admin-view cms-page">
+      <header className="cms-page-header">
         <div>
           <p className="micro-label">Taxonomy</p>
-          <h2>Categories & subcategories</h2>
+          <h2>Categories</h2>
+          <p className="cms-page-lead">
+            Manage top-level categories and nested subcategories. Items marked for the navbar appear in
+            the public menu exactly as structured here.
+          </p>
         </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button type="button" onClick={() => void load(true)}>
-            Sync navbar categories
+        <div className="cms-page-actions">
+          <button type="button" className="btn-secondary" onClick={() => void load(true)}>
+            Sync navbar tree
           </button>
-          <button type="button" onClick={() => startCreate()}>
+          <button type="button" className="btn-primary" onClick={() => startCreate()}>
             + New category
           </button>
         </div>
-      </div>
-      <p className="admin-section-intro">
-        The public navbar shows only categories with <strong>Show in navbar</strong> enabled, nested under
-        their parent. Sync creates the current navbar tree (AI & Automation, Software, Hardware, Guides &
-        Reviews) so the menu always reflects this screen.
-      </p>
-      {message ? <p className="admin-inline-message">{message}</p> : null}
+      </header>
 
-      <div className="admin-management-layout" style={{ marginTop: 16 }}>
-        <section className="admin-panel" style={{ margin: 0 }}>
-          <h3>Tree</h3>
+      <div className="cms-stat-strip">
+        <article>
+          <span>Total</span>
+          <strong>{categories.length}</strong>
+        </article>
+        <article>
+          <span>Top level</span>
+          <strong>{roots.length}</strong>
+        </article>
+        <article>
+          <span>In navbar</span>
+          <strong>{navCount}</strong>
+        </article>
+      </div>
+
+      {message ? <p className="cms-banner">{message}</p> : null}
+
+      <div className="cms-split">
+        <section className="cms-card">
+          <div className="cms-card-head">
+            <h3>Category tree</h3>
+            <small>{loading ? "Loading…" : `${roots.length} groups`}</small>
+          </div>
+
           {loading ? (
-            <p className="admin-section-intro">Loading…</p>
+            <p className="cms-empty">Loading categories…</p>
           ) : categories.length === 0 ? (
-            <p className="admin-section-intro">No categories yet. Create your first one.</p>
+            <div className="cms-empty-state">
+              <p>No categories yet.</p>
+              <button type="button" className="btn-primary" onClick={() => startCreate()}>
+                Create the first category
+              </button>
+            </div>
           ) : (
-            <div className="content-card-list category-admin-tree">
-              {roots.map((root) => (
-                <article key={root.id}>
-                  <div className="category-admin-row">
-                    <NavIcon name={root.icon || root.id} />
-                    <div>
-                      <strong>
-                        {root.locales.en?.name || root.locales.ar?.name || root.id}
-                        {!root.enabled ? " · disabled" : ""}
-                        {root.showInNav === false ? " · hidden from nav" : ""}
-                      </strong>
-                      <small>
-                        {root.locales.ar?.name || "—"} · /category/{root.locales.en?.slug || root.id}
-                      </small>
-                    </div>
-                    <div className="category-admin-actions">
-                      <button type="button" onClick={() => startEdit(root)}>
-                        Edit
-                      </button>
-                      <button type="button" onClick={() => startCreate(root.id)}>
-                        + Sub
-                      </button>
-                      <button type="button" onClick={() => void remove(root.id)}>
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                  {childrenOf(root.id).map((child) => (
-                    <div key={child.id} className="category-admin-row subcategory">
-                      <NavIcon name={child.icon || child.id} />
-                      <div>
-                        <strong>
-                          {child.locales.en?.name || child.locales.ar?.name || child.id}
-                          {!child.enabled ? " · disabled" : ""}
-                          {child.showInNav === false ? " · hidden from nav" : ""}
-                        </strong>
+            <div className="cat-tree">
+              {roots.map((root) => {
+                const children = childrenOf(root.id);
+                const selected = editingId === root.id;
+                return (
+                  <article
+                    key={root.id}
+                    className={`cat-group${selected ? " is-selected" : ""}`}
+                  >
+                    <div className="cat-row">
+                      <span className="cat-icon">
+                        <NavIcon name={root.icon || root.id} />
+                      </span>
+                      <div className="cat-copy">
+                        <strong>{displayName(root)}</strong>
                         <small>
-                          under {root.locales.en?.name || root.id} · /category/
-                          {child.locales.en?.slug || child.id}
+                          {root.locales.ar?.name || "—"} · /category/{root.locales.en?.slug || root.id}
                         </small>
+                        <div className="cat-badges">
+                          {root.showInNav !== false ? (
+                            <span className="badge badge-nav">Navbar</span>
+                          ) : (
+                            <span className="badge badge-muted">Hidden</span>
+                          )}
+                          {root.enabled === false ? (
+                            <span className="badge badge-warn">Disabled</span>
+                          ) : null}
+                          <span className="badge badge-muted">{children.length} sub</span>
+                        </div>
                       </div>
-                      <div className="category-admin-actions">
-                        <button type="button" onClick={() => startEdit(child)}>
+                      <div className="cat-actions">
+                        <button type="button" onClick={() => startEdit(root)}>
                           Edit
                         </button>
-                        <button type="button" onClick={() => void remove(child.id)}>
+                        <button type="button" onClick={() => startCreate(root.id)}>
+                          + Sub
+                        </button>
+                        <button type="button" className="danger" onClick={() => void remove(root.id)}>
                           Delete
                         </button>
                       </div>
                     </div>
-                  ))}
-                </article>
-              ))}
+
+                    {children.length > 0 ? (
+                      <div className="cat-children">
+                        {children.map((child) => (
+                          <div
+                            key={child.id}
+                            className={`cat-row cat-child${editingId === child.id ? " is-selected" : ""}`}
+                          >
+                            <span className="cat-icon">
+                              <NavIcon name={child.icon || child.id} />
+                            </span>
+                            <div className="cat-copy">
+                              <strong>{displayName(child)}</strong>
+                              <small>/category/{child.locales.en?.slug || child.id}</small>
+                              <div className="cat-badges">
+                                {child.showInNav !== false ? (
+                                  <span className="badge badge-nav">Navbar</span>
+                                ) : (
+                                  <span className="badge badge-muted">Hidden</span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="cat-actions">
+                              <button type="button" onClick={() => startEdit(child)}>
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                className="danger"
+                                onClick={() => void remove(child.id)}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </article>
+                );
+              })}
             </div>
           )}
         </section>
 
-        <section className="admin-panel" style={{ margin: 0 }}>
-          <h3>{editingId ? "Edit category" : "Create category"}</h3>
-          <div className="form-grid" style={{ marginTop: 12 }}>
-            <label>
-              English name
-              <input
-                value={draft.nameEn}
-                onChange={(e) => setDraft({ ...draft, nameEn: e.target.value })}
-              />
-            </label>
-            <label>
-              Arabic name
-              <input
-                value={draft.nameAr}
-                onChange={(e) => setDraft({ ...draft, nameAr: e.target.value })}
-                dir="rtl"
-              />
-            </label>
-            <label>
-              English slug
-              <input
-                value={draft.slugEn}
-                onChange={(e) => setDraft({ ...draft, slugEn: e.target.value })}
-                placeholder="auto from name"
-              />
-            </label>
-            <label>
-              Arabic slug
-              <input
-                value={draft.slugAr}
-                onChange={(e) => setDraft({ ...draft, slugAr: e.target.value })}
-                placeholder="auto from name"
-              />
-            </label>
-            <label>
-              Parent category
-              <select
-                value={draft.parentId}
-                onChange={(e) => setDraft({ ...draft, parentId: e.target.value })}
-              >
-                <option value="">— Top level —</option>
-                {parentOptions.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.locales.en?.name || cat.locales.ar?.name || cat.id}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Icon
-              <select
-                value={draft.icon}
-                onChange={(e) => setDraft({ ...draft, icon: e.target.value })}
-              >
-                {ICON_OPTIONS.map((icon) => (
-                  <option key={icon} value={icon}>
-                    {icon}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Order
-              <input
-                type="number"
-                value={draft.order}
-                onChange={(e) => setDraft({ ...draft, order: Number(e.target.value) || 0 })}
-              />
-            </label>
-            <label className="full-field">
-              English description
-              <textarea
-                rows={2}
-                value={draft.descriptionEn}
-                onChange={(e) => setDraft({ ...draft, descriptionEn: e.target.value })}
-              />
-            </label>
-            <label className="full-field">
-              Arabic description
-              <textarea
-                rows={2}
-                dir="rtl"
-                value={draft.descriptionAr}
-                onChange={(e) => setDraft({ ...draft, descriptionAr: e.target.value })}
-              />
-            </label>
-            <label className="check-label">
-              <input
-                type="checkbox"
-                checked={draft.showInNav}
-                onChange={(e) => setDraft({ ...draft, showInNav: e.target.checked })}
-              />{" "}
-              Show in navbar menu
-            </label>
-            <label className="check-label">
-              <input
-                type="checkbox"
-                checked={draft.enabled}
-                onChange={(e) => setDraft({ ...draft, enabled: e.target.checked })}
-              />{" "}
-              Enabled
-            </label>
+        <section className="cms-card cms-card-sticky">
+          <div className="cms-card-head">
+            <h3>{editingId ? "Edit category" : "Create category"}</h3>
+            <small>{editingId ? editingId : "New item"}</small>
           </div>
-          <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-            <button type="button" className="generate-button" disabled={saving} onClick={() => void save()}>
+
+          <div className="cms-form-section">
+            <h4>Names</h4>
+            <div className="form-grid">
+              <label>
+                English name
+                <input
+                  value={draft.nameEn}
+                  onChange={(e) => setDraft({ ...draft, nameEn: e.target.value })}
+                />
+              </label>
+              <label>
+                Arabic name
+                <input
+                  value={draft.nameAr}
+                  onChange={(e) => setDraft({ ...draft, nameAr: e.target.value })}
+                  dir="rtl"
+                />
+              </label>
+              <label>
+                English slug
+                <input
+                  value={draft.slugEn}
+                  onChange={(e) => setDraft({ ...draft, slugEn: e.target.value })}
+                  placeholder="auto from name"
+                />
+              </label>
+              <label>
+                Arabic slug
+                <input
+                  value={draft.slugAr}
+                  onChange={(e) => setDraft({ ...draft, slugAr: e.target.value })}
+                  placeholder="auto from name"
+                />
+              </label>
+            </div>
+          </div>
+
+          <div className="cms-form-section">
+            <h4>Structure</h4>
+            <div className="form-grid">
+              <label>
+                Parent category
+                <select
+                  value={draft.parentId}
+                  onChange={(e) => setDraft({ ...draft, parentId: e.target.value })}
+                >
+                  <option value="">— Top level —</option>
+                  {parentOptions.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {displayName(cat)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Order
+                <input
+                  type="number"
+                  value={draft.order}
+                  onChange={(e) => setDraft({ ...draft, order: Number(e.target.value) || 0 })}
+                />
+              </label>
+            </div>
+          </div>
+
+          <div className="cms-form-section">
+            <h4>Icon</h4>
+            <div className="icon-picker">
+              {ICON_OPTIONS.map((icon) => (
+                <button
+                  key={icon}
+                  type="button"
+                  className={`icon-picker-btn${draft.icon === icon ? " active" : ""}`}
+                  onClick={() => setDraft({ ...draft, icon })}
+                  title={icon}
+                >
+                  <NavIcon name={icon} />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="cms-form-section">
+            <h4>Descriptions</h4>
+            <div className="form-grid">
+              <label className="full-field">
+                English description
+                <textarea
+                  rows={2}
+                  value={draft.descriptionEn}
+                  onChange={(e) => setDraft({ ...draft, descriptionEn: e.target.value })}
+                />
+              </label>
+              <label className="full-field">
+                Arabic description
+                <textarea
+                  rows={2}
+                  dir="rtl"
+                  value={draft.descriptionAr}
+                  onChange={(e) => setDraft({ ...draft, descriptionAr: e.target.value })}
+                />
+              </label>
+            </div>
+          </div>
+
+          <div className="cms-form-section">
+            <h4>Visibility</h4>
+            <div className="cms-toggle-row">
+              <label className="cms-toggle">
+                <input
+                  type="checkbox"
+                  checked={draft.showInNav}
+                  onChange={(e) => setDraft({ ...draft, showInNav: e.target.checked })}
+                />
+                <span>
+                  <strong>Show in navbar</strong>
+                  <small>Appears in the public menu under its parent</small>
+                </span>
+              </label>
+              <label className="cms-toggle">
+                <input
+                  type="checkbox"
+                  checked={draft.enabled}
+                  onChange={(e) => setDraft({ ...draft, enabled: e.target.checked })}
+                />
+                <span>
+                  <strong>Enabled</strong>
+                  <small>Available for post assignment and public pages</small>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div className="cms-form-footer">
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={saving}
+              onClick={() => void save()}
+            >
               {saving ? "Saving…" : editingId ? "Update category" : "Create category"}
             </button>
             {(editingId || draft.nameEn || draft.nameAr) && (
               <button
                 type="button"
+                className="btn-secondary"
                 onClick={() => {
                   setEditingId(null);
                   setDraft(emptyDraft());
@@ -403,11 +503,8 @@ export function CategoriesPanel() {
               </button>
             )}
           </div>
-          <p className="admin-section-intro" style={{ marginTop: 12 }}>
-            Preview icon: <NavIcon name={draft.icon} /> {draft.icon}
-          </p>
         </section>
       </div>
-    </section>
+    </div>
   );
 }

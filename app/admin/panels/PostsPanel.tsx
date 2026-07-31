@@ -558,58 +558,70 @@ export function PostsPanel({
 
   if (editor) {
     const otherLocale: Locale = editor.locale === "ar" ? "en" : "ar";
+    const saveLabel =
+      saveState === "saving"
+        ? "Saving…"
+        : saveState === "saved"
+          ? "Saved"
+          : saveState === "error"
+            ? "Save error"
+            : editor.dirty
+              ? "Unsaved changes"
+              : "Up to date";
+
     return (
-      <div className="admin-view">
-        <section className="admin-panel editor-panel">
-          <div className="editor-head">
-            <div>
-              <p className="micro-label">fikraInAction · bilingual post editor</p>
-              <h2>{editor.title || "Untitled post"}</h2>
+      <div className="admin-view cms-page post-editor-page">
+        <header className="cms-page-header post-editor-header">
+          <div>
+            <button
+              type="button"
+              className="post-editor-back"
+              onClick={() => {
+                if (editor.dirty && !window.confirm("Discard unsaved changes?")) return;
+                setEditor(null);
+              }}
+            >
+              ← Back to posts
+            </button>
+            <p className="micro-label">Bilingual post editor</p>
+            <h2>{editor.title || "Untitled post"}</h2>
+            <div className="post-editor-meta">
               <span className={`draft-badge ${editor.status}`}>
                 {STATUS_LABELS[editor.status] || editor.status}
               </span>
-              <small style={{ marginInlineStart: 12 }}>
-                {saveState === "saving" && "Saving…"}
-                {saveState === "saved" && "Saved"}
-                {saveState === "error" && "Save error"}
-                {editor.dirty && saveState !== "saving" && " · Unsaved changes"}
-              </small>
-            </div>
-            <div className="editor-actions">
-              <button
-                type="button"
-                onClick={() => {
-                  if (editor.dirty && !window.confirm("Discard unsaved changes?")) return;
-                  setEditor(null);
-                }}
-              >
-                Back
-              </button>
-              <button type="button" disabled={saving} onClick={() => void save(editor)}>
-                Save draft
-              </button>
-              <button type="button" onClick={() => void setStatus("in_review")}>
-                Submit review
-              </button>
-              <button type="button" onClick={() => void setStatus("scheduled")}>
-                Schedule
-              </button>
-              {editor.status === "published" ? (
-                <button type="button" onClick={() => void setStatus("draft")}>
-                  Unpublish
-                </button>
-              ) : (
-                <button type="button" className="publish-button" onClick={() => void setStatus("published")}>
-                  Publish
-                </button>
-              )}
-              <button type="button" onClick={() => void setStatus("archived")}>
-                Archive
-              </button>
+              <span className={`post-save-state is-${saveState}`}>{saveLabel}</span>
+              {editor.postId ? <small>ID · {editor.postId}</small> : <small>New post</small>}
             </div>
           </div>
+          <div className="cms-page-actions post-editor-actions">
+            <button type="button" className="btn-secondary" disabled={saving} onClick={() => void save(editor)}>
+              Save draft
+            </button>
+            <button type="button" className="btn-secondary" onClick={() => void setStatus("in_review")}>
+              Submit review
+            </button>
+            <button type="button" className="btn-secondary" onClick={() => void setStatus("scheduled")}>
+              Schedule
+            </button>
+            {editor.status === "published" ? (
+              <button type="button" className="btn-secondary" onClick={() => void setStatus("draft")}>
+                Unpublish
+              </button>
+            ) : (
+              <button type="button" className="btn-primary" onClick={() => void setStatus("published")}>
+                Publish
+              </button>
+            )}
+            <button type="button" className="btn-secondary" onClick={() => void setStatus("archived")}>
+              Archive
+            </button>
+          </div>
+        </header>
 
-          <div className="editor-tabs" style={{ marginTop: 16 }}>
+        {message ? <p className="cms-banner">{message}</p> : null}
+
+        <div className="post-locale-bar">
+          <div className="editor-tabs">
             <button
               type="button"
               className={editor.locale === "ar" ? "active" : ""}
@@ -625,124 +637,158 @@ export function PostsPanel({
               English (EN){editor.locale === "en" && !editor.hasTranslation ? " · new" : ""}
             </button>
           </div>
+          <div className="post-locale-links">
+            {editor.postId && editor.slug ? (
+              <a href={`/${editor.locale}/blog/${editor.slug}`} target="_blank" rel="noreferrer">
+                Preview ↗
+              </a>
+            ) : null}
+            <button type="button" className="btn-link" onClick={() => void switchLocale(otherLocale)}>
+              Edit {otherLocale === "ar" ? "Arabic" : "English"}
+            </button>
+          </div>
+        </div>
 
-          <div className="form-grid" style={{ marginTop: 16 }}>
-            <label className="full-field">
-              Title
-              <input
-                value={editor.title}
-                onChange={(e) => setEditor({ ...editor, title: e.target.value, dirty: true })}
-              />
-            </label>
-            <label>
-              Slug
-              <input
-                value={editor.slug}
-                onChange={(e) => setEditor({ ...editor, slug: e.target.value, dirty: true })}
-                placeholder="auto-generated from title"
-              />
-            </label>
-            <label>
-              Status
-              <select
-                value={editor.status}
-                onChange={(e) =>
-                  setEditor({ ...editor, status: e.target.value as ContentStatus, dirty: true })
+        <div className="post-editor-layout">
+          <div className="post-editor-main">
+            <section className="cms-card">
+              <div className="cms-card-head">
+                <h3>Basics</h3>
+                <small>{editor.locale === "ar" ? "Arabic fields" : "English fields"}</small>
+              </div>
+              <div className="form-grid">
+                <label className="full-field">
+                  Title
+                  <input
+                    value={editor.title}
+                    onChange={(e) => setEditor({ ...editor, title: e.target.value, dirty: true })}
+                    dir={editor.locale === "ar" ? "rtl" : "ltr"}
+                  />
+                </label>
+                <label>
+                  Slug
+                  <input
+                    value={editor.slug}
+                    onChange={(e) => setEditor({ ...editor, slug: e.target.value, dirty: true })}
+                    placeholder="auto-generated from title"
+                  />
+                </label>
+                <label>
+                  Status
+                  <select
+                    value={editor.status}
+                    onChange={(e) =>
+                      setEditor({ ...editor, status: e.target.value as ContentStatus, dirty: true })
+                    }
+                  >
+                    <option value="draft">Draft</option>
+                    <option value="in_review">In review</option>
+                    <option value="scheduled">Scheduled</option>
+                    <option value="published">Published</option>
+                    <option value="archived">Archived</option>
+                  </select>
+                </label>
+                <label>
+                  Schedule for
+                  <input
+                    type="datetime-local"
+                    value={editor.scheduledAt}
+                    onChange={(e) => setEditor({ ...editor, scheduledAt: e.target.value, dirty: true })}
+                  />
+                </label>
+                <label className="full-field">
+                  Excerpt
+                  <textarea
+                    rows={3}
+                    value={editor.excerpt}
+                    onChange={(e) => setEditor({ ...editor, excerpt: e.target.value, dirty: true })}
+                    dir={editor.locale === "ar" ? "rtl" : "ltr"}
+                  />
+                </label>
+              </div>
+            </section>
+
+            <section className="cms-card">
+              <div className="cms-card-head">
+                <h3>Content</h3>
+                <small>TipTap editor · {editor.locale.toUpperCase()}</small>
+              </div>
+              <RichTextEditor
+                initialContent={editor.content}
+                locale={editor.locale}
+                dir={editor.locale === "ar" ? "rtl" : "ltr"}
+                placeholder="Write the post…"
+                onChange={(json) =>
+                  setEditor((current) => (current ? { ...current, content: json, dirty: true } : current))
                 }
-              >
-                <option value="draft">Draft</option>
-                <option value="in_review">In review</option>
-                <option value="scheduled">Scheduled</option>
-                <option value="published">Published</option>
-                <option value="archived">Archived</option>
-              </select>
-            </label>
-            <label>
-              Schedule for
-              <input
-                type="datetime-local"
-                value={editor.scheduledAt}
-                onChange={(e) => setEditor({ ...editor, scheduledAt: e.target.value, dirty: true })}
               />
-            </label>
-            <label className="full-field">
-              Excerpt
-              <textarea
-                rows={3}
-                value={editor.excerpt}
-                onChange={(e) => setEditor({ ...editor, excerpt: e.target.value, dirty: true })}
-              />
-            </label>
+            </section>
+
+            <section className="cms-card">
+              <div className="cms-card-head">
+                <h3>SEO &amp; sharing</h3>
+                <small>Search and social previews</small>
+              </div>
+              <div className="form-grid">
+                <label>
+                  SEO title
+                  <input
+                    value={editor.seoTitle}
+                    onChange={(e) => setEditor({ ...editor, seoTitle: e.target.value, dirty: true })}
+                  />
+                </label>
+                <label>
+                  SEO description
+                  <input
+                    value={editor.seoDescription}
+                    onChange={(e) => setEditor({ ...editor, seoDescription: e.target.value, dirty: true })}
+                  />
+                </label>
+                <label>
+                  OG title
+                  <input
+                    value={editor.ogTitle}
+                    onChange={(e) => setEditor({ ...editor, ogTitle: e.target.value, dirty: true })}
+                  />
+                </label>
+                <label>
+                  OG description
+                  <input
+                    value={editor.ogDescription}
+                    onChange={(e) => setEditor({ ...editor, ogDescription: e.target.value, dirty: true })}
+                  />
+                </label>
+                <label className="full-field">
+                  Canonical URL
+                  <input
+                    value={editor.canonicalUrl}
+                    onChange={(e) => setEditor({ ...editor, canonicalUrl: e.target.value, dirty: true })}
+                    placeholder="https://fikrainaction.com/…"
+                  />
+                </label>
+                <label className="cms-toggle">
+                  <input
+                    type="checkbox"
+                    checked={editor.noIndex}
+                    onChange={(e) => setEditor({ ...editor, noIndex: e.target.checked, dirty: true })}
+                  />
+                  <span>
+                    <strong>No-index this page</strong>
+                    <small>Hide from search engines</small>
+                  </span>
+                </label>
+              </div>
+            </section>
           </div>
 
-          <div style={{ marginTop: 18 }}>
-            <RichTextEditor
-              initialContent={editor.content}
-              locale={editor.locale}
-              dir={editor.locale === "ar" ? "rtl" : "ltr"}
-              placeholder="Write the post…"
-              onChange={(json) =>
-                setEditor((current) => (current ? { ...current, content: json, dirty: true } : current))
-              }
-            />
-          </div>
-
-          <h3 style={{ marginTop: 28 }}>SEO &amp; sharing</h3>
-          <div className="form-grid seo-editor">
-            <label>
-              SEO title
-              <input
-                value={editor.seoTitle}
-                onChange={(e) => setEditor({ ...editor, seoTitle: e.target.value, dirty: true })}
-              />
-            </label>
-            <label>
-              SEO description
-              <input
-                value={editor.seoDescription}
-                onChange={(e) => setEditor({ ...editor, seoDescription: e.target.value, dirty: true })}
-              />
-            </label>
-            <label>
-              OG title
-              <input
-                value={editor.ogTitle}
-                onChange={(e) => setEditor({ ...editor, ogTitle: e.target.value, dirty: true })}
-              />
-            </label>
-            <label>
-              OG description
-              <input
-                value={editor.ogDescription}
-                onChange={(e) => setEditor({ ...editor, ogDescription: e.target.value, dirty: true })}
-              />
-            </label>
-            <label className="full-field">
-              Canonical URL
-              <input
-                value={editor.canonicalUrl}
-                onChange={(e) => setEditor({ ...editor, canonicalUrl: e.target.value, dirty: true })}
-                placeholder="https://fikrainaction.com/…"
-              />
-            </label>
-            <label className="check-label">
-              <input
-                type="checkbox"
-                checked={editor.noIndex}
-                onChange={(e) => setEditor({ ...editor, noIndex: e.target.checked, dirty: true })}
-              />{" "}
-              No-index this page
-            </label>
-          </div>
-
-          <h3 style={{ marginTop: 28 }}>Organization</h3>
-          <div className="form-grid">
-            <div className="full-field">
-              <span style={{ display: "block", marginBottom: 8, fontWeight: 650 }}>Categories</span>
+          <aside className="post-editor-aside">
+            <section className="cms-card cms-card-sticky">
+              <div className="cms-card-head">
+                <h3>Categories</h3>
+                <small>{editor.categoryIds.length} selected</small>
+              </div>
               {categories.length === 0 ? (
-                <p className="admin-section-intro">
-                  No categories yet. Create them in the Categories admin screen.
-                </p>
+                <p className="cms-empty">No categories yet. Create them under Categories.</p>
               ) : (
                 <div className="category-picker">
                   {categories
@@ -784,145 +830,174 @@ export function PostsPanel({
                     })}
                 </div>
               )}
-            </div>
-            <label>
-              Tag IDs (comma-separated)
-              <input
-                value={editor.tagIds}
-                onChange={(e) => setEditor({ ...editor, tagIds: e.target.value, dirty: true })}
-              />
-            </label>
-            <label className="full-field">
-              Related post IDs (comma-separated)
-              <input
-                value={editor.relatedPostIds}
-                onChange={(e) => setEditor({ ...editor, relatedPostIds: e.target.value, dirty: true })}
-              />
-            </label>
-            <label className="check-label">
-              <input
-                type="checkbox"
-                checked={editor.featured}
-                onChange={(e) => setEditor({ ...editor, featured: e.target.checked, dirty: true })}
-              />{" "}
-              Featured
-            </label>
-            <label className="check-label">
-              <input
-                type="checkbox"
-                checked={editor.pinned}
-                onChange={(e) => setEditor({ ...editor, pinned: e.target.checked, dirty: true })}
-              />{" "}
-              Pinned
-            </label>
-            <label className="check-label">
-              <input
-                type="checkbox"
-                checked={editor.commentsEnabled}
-                onChange={(e) => setEditor({ ...editor, commentsEnabled: e.target.checked, dirty: true })}
-              />{" "}
-              Comments enabled
-            </label>
-            <label className="check-label">
-              <input
-                type="checkbox"
-                checked={editor.isAffiliateContent}
-                onChange={(e) =>
-                  setEditor({ ...editor, isAffiliateContent: e.target.checked, dirty: true })
-                }
-              />{" "}
-              Affiliate content
-            </label>
-            {editor.isAffiliateContent && (
-              <label className="full-field">
-                Affiliate disclosure ({editor.locale})
-                <textarea
-                  rows={2}
-                  value={editor.affiliateDisclosure}
-                  onChange={(e) =>
-                    setEditor({ ...editor, affiliateDisclosure: e.target.value, dirty: true })
-                  }
-                />
-              </label>
-            )}
-          </div>
+            </section>
 
-          <h3 style={{ marginTop: 28 }}>Media</h3>
-          <div className="form-grid">
-            <label>
-              Thumbnail media ID
-              <input
-                value={editor.thumbnailMediaId}
-                onChange={(e) => setEditor({ ...editor, thumbnailMediaId: e.target.value, dirty: true })}
-              />
-            </label>
-            <label>
-              Thumbnail URL
-              <input
-                value={editor.thumbnailUrl}
-                onChange={(e) => setEditor({ ...editor, thumbnailUrl: e.target.value, dirty: true })}
-                placeholder="https://…"
-              />
-            </label>
-            <label>
-              Thumbnail alt text
-              <input
-                value={editor.thumbnailAlt}
-                onChange={(e) => setEditor({ ...editor, thumbnailAlt: e.target.value, dirty: true })}
-              />
-            </label>
-            <label>
-              Caption
-              <input
-                value={editor.caption}
-                onChange={(e) => setEditor({ ...editor, caption: e.target.value, dirty: true })}
-              />
-            </label>
-            <label className="full-field">
-              Sources / references (JSON array or one URL per line)
-              <textarea
-                rows={4}
-                value={editor.sources}
-                onChange={(e) => setEditor({ ...editor, sources: e.target.value, dirty: true })}
-              />
-            </label>
-          </div>
+            <section className="cms-card">
+              <div className="cms-card-head">
+                <h3>Media</h3>
+                <small>Featured image</small>
+              </div>
+              {editor.thumbnailUrl ? (
+                <div className="post-thumb-preview">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={editor.thumbnailUrl} alt={editor.thumbnailAlt || "Thumbnail preview"} />
+                </div>
+              ) : null}
+              <div className="form-grid form-grid-stack">
+                <label>
+                  Thumbnail URL
+                  <input
+                    value={editor.thumbnailUrl}
+                    onChange={(e) => setEditor({ ...editor, thumbnailUrl: e.target.value, dirty: true })}
+                    placeholder="https://…"
+                  />
+                </label>
+                <label>
+                  Thumbnail media ID
+                  <input
+                    value={editor.thumbnailMediaId}
+                    onChange={(e) =>
+                      setEditor({ ...editor, thumbnailMediaId: e.target.value, dirty: true })
+                    }
+                  />
+                </label>
+                <label>
+                  Alt text
+                  <input
+                    value={editor.thumbnailAlt}
+                    onChange={(e) => setEditor({ ...editor, thumbnailAlt: e.target.value, dirty: true })}
+                  />
+                </label>
+                <label>
+                  Caption
+                  <input
+                    value={editor.caption}
+                    onChange={(e) => setEditor({ ...editor, caption: e.target.value, dirty: true })}
+                  />
+                </label>
+              </div>
+            </section>
 
-          {editor.postId && editor.slug && (
-            <p style={{ marginTop: 12 }}>
-              <a href={`/${editor.locale}/blog/${editor.slug}`} target="_blank" rel="noreferrer">
-                Preview public URL ↗
-              </a>
-              {" · "}
-              <button
-                type="button"
-                className="btn-link"
-                onClick={() => void switchLocale(otherLocale)}
-              >
-                Edit {otherLocale === "ar" ? "Arabic" : "English"} translation
-              </button>
-            </p>
-          )}
+            <section className="cms-card">
+              <div className="cms-card-head">
+                <h3>Settings</h3>
+                <small>Shared across locales</small>
+              </div>
+              <div className="cms-toggle-row">
+                <label className="cms-toggle">
+                  <input
+                    type="checkbox"
+                    checked={editor.featured}
+                    onChange={(e) => setEditor({ ...editor, featured: e.target.checked, dirty: true })}
+                  />
+                  <span>
+                    <strong>Featured</strong>
+                    <small>Highlight on listings</small>
+                  </span>
+                </label>
+                <label className="cms-toggle">
+                  <input
+                    type="checkbox"
+                    checked={editor.pinned}
+                    onChange={(e) => setEditor({ ...editor, pinned: e.target.checked, dirty: true })}
+                  />
+                  <span>
+                    <strong>Pinned</strong>
+                    <small>Keep near the top</small>
+                  </span>
+                </label>
+                <label className="cms-toggle">
+                  <input
+                    type="checkbox"
+                    checked={editor.commentsEnabled}
+                    onChange={(e) =>
+                      setEditor({ ...editor, commentsEnabled: e.target.checked, dirty: true })
+                    }
+                  />
+                  <span>
+                    <strong>Comments</strong>
+                    <small>Allow reader discussion</small>
+                  </span>
+                </label>
+                <label className="cms-toggle">
+                  <input
+                    type="checkbox"
+                    checked={editor.isAffiliateContent}
+                    onChange={(e) =>
+                      setEditor({ ...editor, isAffiliateContent: e.target.checked, dirty: true })
+                    }
+                  />
+                  <span>
+                    <strong>Affiliate content</strong>
+                    <small>Show disclosure when needed</small>
+                  </span>
+                </label>
+              </div>
+              {editor.isAffiliateContent ? (
+                <label className="full-field" style={{ display: "grid", gap: 6, marginTop: 14 }}>
+                  Affiliate disclosure ({editor.locale})
+                  <textarea
+                    rows={2}
+                    value={editor.affiliateDisclosure}
+                    onChange={(e) =>
+                      setEditor({ ...editor, affiliateDisclosure: e.target.value, dirty: true })
+                    }
+                  />
+                </label>
+              ) : null}
+              <div className="form-grid form-grid-stack" style={{ marginTop: 14 }}>
+                <label>
+                  Tag IDs
+                  <input
+                    value={editor.tagIds}
+                    onChange={(e) => setEditor({ ...editor, tagIds: e.target.value, dirty: true })}
+                    placeholder="comma-separated"
+                  />
+                </label>
+                <label>
+                  Related post IDs
+                  <input
+                    value={editor.relatedPostIds}
+                    onChange={(e) =>
+                      setEditor({ ...editor, relatedPostIds: e.target.value, dirty: true })
+                    }
+                    placeholder="comma-separated"
+                  />
+                </label>
+                <label>
+                  Sources / references
+                  <textarea
+                    rows={3}
+                    value={editor.sources}
+                    onChange={(e) => setEditor({ ...editor, sources: e.target.value, dirty: true })}
+                    placeholder="JSON array or one URL per line"
+                  />
+                </label>
+              </div>
+            </section>
 
-          {revisions.length > 0 && (
-            <div style={{ marginTop: 24 }}>
-              <h3>Revisions</h3>
-              <ul className="revisions-list">
-                {revisions.map((rev) => (
-                  <li key={rev.id}>
-                    <span>
-                      {rev.createdAt || "unknown time"} · {rev.createdBy || "unknown"}
-                    </span>
-                    <button type="button" onClick={() => void restoreRevision(rev.id)}>
-                      Restore
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {message && <div className="status-message">{message}</div>}
-        </section>
+            {revisions.length > 0 ? (
+              <section className="cms-card">
+                <div className="cms-card-head">
+                  <h3>Revisions</h3>
+                  <small>{revisions.length}</small>
+                </div>
+                <ul className="revisions-list">
+                  {revisions.map((rev) => (
+                    <li key={rev.id}>
+                      <span>
+                        {rev.createdAt || "unknown time"} · {rev.createdBy || "unknown"}
+                      </span>
+                      <button type="button" onClick={() => void restoreRevision(rev.id)}>
+                        Restore
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+          </aside>
+        </div>
       </div>
     );
   }
