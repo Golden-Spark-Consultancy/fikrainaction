@@ -63,7 +63,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com data:",
               "img-src 'self' data: blob: https:",
-              "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.google-analytics.com https://www.googletagmanager.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebaseinstallations.googleapis.com",
+              "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.google-analytics.com https://www.google-analytics.com https://analytics.google.com https://www.google.com https://www.googletagmanager.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebaseinstallations.googleapis.com",
               "frame-src 'self' https://www.youtube-nocookie.com https://www.googletagmanager.com",
               "base-uri 'self'",
               "form-action 'self'",
