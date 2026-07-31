@@ -79,8 +79,6 @@ export function Header({
                 <div
                   key={item.id}
                   className={`nav-dropdown${expanded ? " open" : ""}`}
-                  onMouseEnter={() => setOpenGroup(item.id)}
-                  onMouseLeave={() => setOpenGroup((current) => (current === item.id ? null : current))}
                 >
                   <button
                     type="button"
@@ -98,30 +96,24 @@ export function Header({
                     </span>
                   </button>
                   <div className="nav-dropdown-panel" role="menu">
-                    {item.href ? (
-                      <Link
-                        role="menuitem"
-                        className="nav-dropdown-parent"
-                        href={itemHref(item, locale)}
-                        onClick={() => setOpen(false)}
-                      >
-                        <NavIcon name={icon} />
-                        <span>{itemLabel(item, locale)}</span>
-                      </Link>
-                    ) : null}
-                    {children.map((child) => (
-                      <Link
-                        key={child.id}
-                        role="menuitem"
-                        href={itemHref(child, locale)}
-                        target={child.external ? "_blank" : undefined}
-                        rel={child.external ? "noopener noreferrer" : undefined}
-                        onClick={() => setOpen(false)}
-                      >
-                        <NavIcon name={iconForNavItem(child.id, child.icon)} />
-                        <span>{itemLabel(child, locale)}</span>
-                      </Link>
-                    ))}
+                    <div className="nav-dropdown-panel-inner">
+                      {children.map((child) => (
+                        <Link
+                          key={child.id}
+                          role="menuitem"
+                          href={itemHref(child, locale)}
+                          target={child.external ? "_blank" : undefined}
+                          rel={child.external ? "noopener noreferrer" : undefined}
+                          onClick={() => {
+                            setOpen(false);
+                            setOpenGroup(null);
+                          }}
+                        >
+                          <NavIcon name={iconForNavItem(child.id, child.icon)} />
+                          <span>{itemLabel(child, locale)}</span>
+                        </Link>
+                      ))}
+                    </div>
                   </div>
                 </div>
               );
@@ -151,9 +143,6 @@ export function Header({
             aria-label={t("nav.search")}
           >
             ⌕
-          </Link>
-          <Link className="nav-cta" href={localizedPath(locale, "/tools")}>
-            {t("nav.tools")} <span aria-hidden="true">→</span>
           </Link>
         </div>
       </div>

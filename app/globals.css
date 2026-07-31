@@ -108,10 +108,19 @@ a { color: inherit; text-decoration: none; }
 .nav-dropdown-panel {
   position: absolute;
   z-index: 30;
-  top: calc(100% + 8px);
+  top: 100%;
   inset-inline-start: 0;
   min-width: 230px;
   display: none;
+  /* Invisible bridge so the pointer can move from trigger into the submenu */
+  padding-top: 10px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.nav-dropdown-panel-inner {
+  display: grid;
+  gap: 2px;
   padding: 8px;
   border: 1px solid #24384f;
   border-radius: 14px;
@@ -121,8 +130,7 @@ a { color: inherit; text-decoration: none; }
 .nav-dropdown:hover > .nav-dropdown-panel,
 .nav-dropdown:focus-within > .nav-dropdown-panel,
 .nav-dropdown.open > .nav-dropdown-panel {
-  display: grid;
-  gap: 2px;
+  display: block;
 }
 .nav-dropdown-panel a {
   display: flex;
@@ -138,12 +146,6 @@ a { color: inherit; text-decoration: none; }
 .nav-dropdown-panel a:focus-visible {
   background: rgba(56,182,255,.12);
   color: #fff;
-}
-.nav-dropdown-parent {
-  border-bottom: 1px solid #1e3248;
-  margin-bottom: 2px;
-  padding-bottom: 11px !important;
-  color: #fff !important;
 }
 .nav-actions { display: flex; align-items: center; gap: 9px; }
 .search-button { width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid #26384b; border-radius: 10px; color: #dce7f3; font-size: 23px; transition: border-color .2s ease, background .2s ease, color .2s ease; }
@@ -253,19 +255,21 @@ a { color: inherit; text-decoration: none; }
     position: static;
     display: none;
     min-width: 0;
+    margin: 0;
+    padding-top: 0;
+  }
+  .nav-dropdown-panel-inner {
     margin: 0 0 6px;
     box-shadow: none;
     background: rgba(255,255,255,.03);
   }
-  .nav-dropdown.open > .nav-dropdown-panel,
+  /* Mobile: tap to open; disable hover so menus don't flash open */
+  .nav-dropdown:hover > .nav-dropdown-panel,
   .nav-dropdown:focus-within > .nav-dropdown-panel {
-    display: grid;
-  }
-  .nav-dropdown:hover > .nav-dropdown-panel {
     display: none;
   }
-  .nav-dropdown.open:hover > .nav-dropdown-panel {
-    display: grid;
+  .nav-dropdown.open > .nav-dropdown-panel {
+    display: block;
   }
   .mobile-toggle { display: block; }
   .search-button { display: grid; }
