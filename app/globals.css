@@ -708,12 +708,6 @@ html[data-theme="dark"] .hero-copy h1, html.dark .hero-copy h1 { color: #f4f8fc;
   background: transparent;
   border-bottom: 0;
 }
-.blog-article-hero > .container:first-child {
-  max-width: 960px;
-}
-.blog-article-hero .page-breadcrumb {
-  padding-block: 14px 10px;
-}
 .blog-article-breadcrumb,
 .page-breadcrumb {
   padding-block: 0 10px;
@@ -765,12 +759,12 @@ html[data-theme="dark"] .hero-copy h1, html.dark .hero-copy h1 { color: #f4f8fc;
   z-index: 1;
   pointer-events: none;
   background:
-    linear-gradient(180deg, rgba(0, 19, 41, 0.35) 0%, rgba(0, 19, 41, 0.55) 42%, rgba(0, 19, 41, 0.92) 100%),
+    linear-gradient(180deg, rgba(0, 19, 41, 0.62) 0%, rgba(0, 19, 41, 0.42) 38%, rgba(0, 19, 41, 0.92) 100%),
     linear-gradient(90deg, rgba(0, 19, 41, 0.55) 0%, rgba(0, 19, 41, 0.18) 55%, rgba(0, 19, 41, 0.35) 100%);
 }
 html[dir="rtl"] .blog-article-cover-shade {
   background:
-    linear-gradient(180deg, rgba(0, 19, 41, 0.35) 0%, rgba(0, 19, 41, 0.55) 42%, rgba(0, 19, 41, 0.92) 100%),
+    linear-gradient(180deg, rgba(0, 19, 41, 0.62) 0%, rgba(0, 19, 41, 0.42) 38%, rgba(0, 19, 41, 0.92) 100%),
     linear-gradient(270deg, rgba(0, 19, 41, 0.55) 0%, rgba(0, 19, 41, 0.18) 55%, rgba(0, 19, 41, 0.35) 100%);
 }
 .blog-article-cover-copy {
@@ -778,11 +772,37 @@ html[dir="rtl"] .blog-article-cover-shade {
   z-index: 2;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 16px;
   min-height: inherit;
   max-width: 960px;
-  padding-block: clamp(28px, 5vw, 40px) clamp(18px, 3vw, 28px);
+  padding-block: clamp(16px, 2.8vw, 24px) clamp(18px, 3vw, 28px);
+}
+.blog-article-cover-main {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.blog-article-cover .page-breadcrumb {
+  padding: 0;
+  color: rgba(244, 248, 252, 0.78);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.4);
+}
+.blog-article-cover .page-breadcrumb a {
+  color: rgba(244, 248, 252, 0.88);
+  text-decoration: none;
+}
+.blog-article-cover .page-breadcrumb a:hover,
+.blog-article-cover .page-breadcrumb a:focus-visible {
+  color: #fff;
+  text-decoration: underline;
+}
+.blog-article-cover .page-breadcrumb strong {
+  color: #fff;
+  font-weight: 700;
+}
+.blog-article-cover .breadcrumb-sep {
+  color: rgba(244, 248, 252, 0.45);
 }
 .blog-article-cover h1 {
   margin: 0;

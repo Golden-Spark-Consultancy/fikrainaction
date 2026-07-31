@@ -178,10 +178,6 @@ export default async function BlogArticlePage({
       <ArticleExtras />
 
       <header className="article-hero blog-article-hero">
-        <div className="container">
-          <Breadcrumbs items={crumbItems} />
-        </div>
-
         <div
           className={`blog-article-cover${thumbnailUrl ? " has-image" : ""}`}
         >
@@ -198,16 +194,19 @@ export default async function BlogArticlePage({
           )}
           <span className="blog-article-cover-shade" aria-hidden="true" />
           <div className="container blog-article-cover-copy">
-            <h1>{title}</h1>
-            {excerpt ? <p className="blog-article-excerpt">{excerpt}</p> : null}
-            <div className="blog-article-meta">
-              <span className="blog-article-avatar" aria-hidden="true">
-                FA
-              </span>
-              <div className="blog-article-meta-chips">
-                <span className="blog-article-chip">
-                  {t("common.readTime", { minutes: reading })}
+            <Breadcrumbs items={crumbItems} />
+            <div className="blog-article-cover-main">
+              <h1>{title}</h1>
+              {excerpt ? <p className="blog-article-excerpt">{excerpt}</p> : null}
+              <div className="blog-article-meta">
+                <span className="blog-article-avatar" aria-hidden="true">
+                  FA
                 </span>
+                <div className="blog-article-meta-chips">
+                  <span className="blog-article-chip">
+                    {t("common.readTime", { minutes: reading })}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
