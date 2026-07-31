@@ -8,6 +8,7 @@ import {
 } from "../../../../lib/i18n/config";
 import { createTranslator } from "../../../../lib/i18n/translate";
 import { buildPageMetadata } from "../../../../lib/seo/metadata";
+import { getCategoryById } from "../../../../lib/cms/categories";
 import { getPostBySlug, getPostLocale } from "../../../../lib/cms/posts";
 import { extractHeadingsFromHtml } from "../../../../lib/content/render-tiptap";
 import {
@@ -17,6 +18,7 @@ import {
 } from "../../../../lib/seo/jsonld";
 import { posts as seedPosts } from "../../../../lib/data";
 import { ArticleExtras } from "../../../components/ArticleExtras";
+import { Breadcrumbs } from "../../../components/Breadcrumbs";
 import { CommentSection } from "../../../components/CommentSection";
 
 export async function generateMetadata({
@@ -112,6 +114,53 @@ export default async function BlogArticlePage({
   const headings = extractHeadingsFromHtml(html);
   const url = `${SITE_URL}${localizedPath(locale, `/blog/${slug}`)}`;
 
+  const crumbItems: { label: string; href?: string }[] = [
+    { label: t("nav.home"), href: localizedPath(locale) },
+  ];
+  const jsonLdCrumbs: { name: string; url: string }[] = [
+    { name: "fikraInAction", url: `${SITE_URL}${localizedPath(locale)}` },
+  ];
+
+  const primaryCategoryId = found?.shared.categoryIds?.[0];
+  if (primaryCategoryId) {
+    const category = await getCategoryById(primaryCategoryId).catch(() => null);
+    if (category) {
+      if (category.parentId) {
+        const parent = await getCategoryById(category.parentId).catch(() => null);
+        if (parent) {
+          const parentSlug =
+            parent.locales[locale]?.slug ||
+            parent.locales.en?.slug ||
+            parent.locales.ar?.slug ||
+            parent.id;
+          const parentName =
+            parent.locales[locale]?.name ||
+            parent.locales.en?.name ||
+            parent.locales.ar?.name ||
+            parent.id;
+          const parentHref = localizedPath(locale, `/category/${parentSlug}`);
+          crumbItems.push({ label: parentName, href: parentHref });
+          jsonLdCrumbs.push({ name: parentName, url: `${SITE_URL}${parentHref}` });
+        }
+      }
+      const catSlug =
+        category.locales[locale]?.slug ||
+        category.locales.en?.slug ||
+        category.locales.ar?.slug ||
+        category.id;
+      const catName =
+        category.locales[locale]?.name ||
+        category.locales.en?.name ||
+        category.locales.ar?.name ||
+        category.id;
+      const catHref = localizedPath(locale, `/category/${catSlug}`);
+      crumbItems.push({ label: catName, href: catHref });
+      jsonLdCrumbs.push({ name: catName, url: `${SITE_URL}${catHref}` });
+    }
+  }
+  crumbItems.push({ label: title! });
+  jsonLdCrumbs.push({ name: title!, url });
+
   return (
     <main id="main-content" className="blog-article-page">
       <JsonLd
@@ -123,11 +172,7 @@ export default async function BlogArticlePage({
             datePublished: publishedAt ?? undefined,
             locale,
           }),
-          breadcrumbJsonLd([
-            { name: "fikraInAction", url: `${SITE_URL}${localizedPath(locale)}` },
-            { name: t("nav.blog"), url: `${SITE_URL}${localizedPath(locale, "/blog")}` },
-            { name: title!, url },
-          ]),
+          breadcrumbJsonLd(jsonLdCrumbs),
         ]}
       />
       <ArticleExtras />
@@ -135,11 +180,7 @@ export default async function BlogArticlePage({
       <header className="article-hero blog-article-hero">
         <div className="container">
           <div className="blog-article-hero-inner">
-            <nav className="breadcrumb blog-article-breadcrumb" aria-label="Breadcrumb">
-              <Link href={localizedPath(locale)}>{t("nav.home")}</Link>
-              <span>/</span>
-              <Link href={localizedPath(locale, "/blog")}>{t("nav.blog")}</Link>
-            </nav>
+            <Breadcrumbs items={crumbItems} />
             <h1>{title}</h1>
             {excerpt ? <p className="blog-article-excerpt">{excerpt}</p> : null}
             {thumbnailUrl ? (

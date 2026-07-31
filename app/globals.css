@@ -712,9 +712,25 @@ html[data-theme="dark"] .hero-copy h1, html.dark .hero-copy h1 { color: #f4f8fc;
   max-width: 760px;
   padding-block: 22px 20px;
 }
-.blog-article-breadcrumb {
+.blog-article-breadcrumb,
+.page-breadcrumb {
   padding-block: 0 10px;
   font-size: 11px;
+  flex-wrap: wrap;
+}
+.page-breadcrumb {
+  padding-block: 18px 8px;
+}
+.category-page .category-posts {
+  padding-top: 8px;
+}
+.breadcrumb-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+.breadcrumb-sep {
+  color: #9aa8b5;
 }
 .blog-article-hero-inner h1 {
   margin: 0 0 10px;

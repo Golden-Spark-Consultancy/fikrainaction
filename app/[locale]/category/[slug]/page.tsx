@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
-import { getCategoryBySlug } from "../../../../lib/cms/categories";
+import { getCategoryById, getCategoryBySlug } from "../../../../lib/cms/categories";
 import { listPublishedPosts } from "../../../../lib/cms/posts";
 import {
   isLocale,
@@ -9,8 +8,17 @@ import {
 } from "../../../../lib/i18n/config";
 import { createTranslator } from "../../../../lib/i18n/translate";
 import { buildPageMetadata } from "../../../../lib/seo/metadata";
-import { categories as legacyCategories, tools } from "../../../../lib/data";
+import { categories as legacyCategories } from "../../../../lib/data";
+import { Breadcrumbs } from "../../../components/Breadcrumbs";
 import { PostCard } from "../../../components/PostCard";
+
+function categoryLabel(cat: { locales: { ar?: { name?: string }; en?: { name?: string } }; id: string }, locale: Locale) {
+  return cat.locales[locale]?.name || cat.locales.en?.name || cat.locales.ar?.name || cat.id;
+}
+
+function categorySlug(cat: { locales: { ar?: { slug?: string }; en?: { slug?: string } }; id: string }, locale: Locale) {
+  return cat.locales[locale]?.slug || cat.locales.en?.slug || cat.locales.ar?.slug || cat.id;
+}
 
 export async function generateMetadata({
   params,
@@ -50,32 +58,30 @@ export default async function CategoryPage({
 
   const title =
     cms?.locales[locale]?.name || cms?.locales.en?.name || legacy?.name || slug;
-  const description =
-    cms?.locales[locale]?.description ||
-    cms?.locales.en?.description ||
-    legacy?.description ||
-    t("home.exploreCategories");
 
   const posts = cms
     ? await listPublishedPosts(locale, { limit: 24, categoryId: cms.id }).catch(() => [])
     : [];
 
-  const relatedTools = tools.filter((tool) =>
-    tool.category.toLowerCase().includes(title.split(" ")[0].toLowerCase()),
-  );
+  const crumbs = [{ label: t("nav.home"), href: localizedPath(locale) }];
+  if (cms?.parentId) {
+    const parent = await getCategoryById(cms.parentId).catch(() => null);
+    if (parent) {
+      crumbs.push({
+        label: categoryLabel(parent, locale),
+        href: localizedPath(locale, `/category/${categorySlug(parent, locale)}`),
+      });
+    }
+  }
+  crumbs.push({ label: title });
 
   return (
-    <main id="main-content">
-      <section className="category-hero">
-        <div className="container">
-          <p className="micro-label">fikraInAction</p>
-          <h1>{title}</h1>
-          <p>{description}</p>
-        </div>
-      </section>
+    <main id="main-content" className="category-page">
+      <div className="container">
+        <Breadcrumbs items={crumbs} />
+      </div>
 
-      <section className="section container">
-        <h2 style={{ marginBottom: 18 }}>{t("nav.blog")}</h2>
+      <section className="section container category-posts">
         {posts.length === 0 ? (
           <p>{t("common.noResults")}</p>
         ) : (
@@ -94,23 +100,6 @@ export default async function CategoryPage({
           </div>
         )}
       </section>
-
-      {relatedTools.length > 0 && (
-        <section className="section container">
-          <h2 style={{ marginBottom: 18 }}>{t("nav.tools")}</h2>
-          <div className="tool-grid">
-            {relatedTools.map((tool) => (
-              <article className="tool-card" key={tool.slug}>
-                <h3>{tool.name}</h3>
-                <p>{tool.description}</p>
-                <Link href={localizedPath(locale, `/tools/${tool.slug}`)}>
-                  {t("common.readMore")} →
-                </Link>
-              </article>
-            ))}
-          </div>
-        </section>
-      )}
     </main>
   );
 }
