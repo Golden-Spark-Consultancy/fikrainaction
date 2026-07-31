@@ -181,6 +181,8 @@ export type MenuItem = {
   href?: string;
   external?: boolean;
   enabled: boolean;
+  /** Optional icon key rendered next to the label in the navbar. */
+  icon?: string;
   children?: MenuItem[];
 };
 

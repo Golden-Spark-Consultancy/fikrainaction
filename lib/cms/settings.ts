@@ -1,4 +1,5 @@
 import { getAdminFirestore } from "../firebase/admin";
+import { defaultHeaderMenu as buildDefaultHeaderMenu } from "../nav/menu";
 import type { HomepageSection, MenuDoc, SiteSettings } from "../types/cms";
 import { COLLECTIONS } from "./collections";
 
@@ -27,25 +28,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
 }
 
 export function defaultHeaderMenu(): MenuDoc {
-  return {
-    id: "header",
-    location: "header",
-    updatedAt: new Date().toISOString(),
-    items: [
-      { id: "home", label: { ar: "الرئيسية", en: "Home" }, href: "/", enabled: true },
-      { id: "ai", label: { ar: "الذكاء الاصطناعي", en: "Artificial Intelligence" }, href: "/category/artificial-intelligence", enabled: true },
-      { id: "automation", label: { ar: "الأتمتة", en: "Automation" }, href: "/category/automation", enabled: true },
-      { id: "programming", label: { ar: "البرمجة", en: "Programming" }, href: "/category/programming", enabled: true },
-      { id: "hardware", label: { ar: "الأجهزة", en: "Hardware" }, href: "/category/hardware", enabled: true },
-      { id: "software", label: { ar: "البرمجيات", en: "Software" }, href: "/category/software", enabled: true },
-      { id: "arduino", label: { ar: "أردوينو", en: "Arduino" }, href: "/category/arduino", enabled: true },
-      { id: "rpi", label: { ar: "راسبيري باي", en: "Raspberry Pi" }, href: "/category/raspberry-pi", enabled: true },
-      { id: "esp32", label: { ar: "ESP32", en: "ESP32" }, href: "/category/esp32", enabled: true },
-      { id: "tutorials", label: { ar: "شروحات", en: "Tutorials" }, href: "/category/tutorials", enabled: true },
-      { id: "reviews", label: { ar: "مراجعات", en: "Reviews" }, href: "/category/reviews", enabled: true },
-      { id: "about", label: { ar: "من نحن", en: "About" }, href: "/about", enabled: true },
-    ],
-  };
+  return buildDefaultHeaderMenu();
 }
 
 export function defaultFooterMenu(): MenuDoc {
