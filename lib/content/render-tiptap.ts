@@ -79,18 +79,29 @@ function slugFromHeading(text: string) {
     .slice(0, 80) || "section";
 }
 
+const ALLOWED_TEXT_ALIGN = new Set(["center", "right", "justify"]);
+
+/** TextAlign attrs render as classes (not inline styles) since sanitizeRichHtml forbids the style attribute. */
+function alignClass(node: TipTapNode): string {
+  const align = node.attrs?.textAlign;
+  if (typeof align === "string" && ALLOWED_TEXT_ALIGN.has(align)) {
+    return ` class="text-align-${align}"`;
+  }
+  return "";
+}
+
 function renderNode(node: TipTapNode): string {
   const kids = () => renderInline(node.content);
   switch (node.type) {
     case "doc":
       return (node.content ?? []).map(renderNode).join("");
     case "paragraph":
-      return `<p>${kids()}</p>`;
+      return `<p${alignClass(node)}>${kids()}</p>`;
     case "heading": {
-      const level = Math.min(6, Math.max(2, Number(node.attrs?.level ?? 2)));
+      const level = Math.min(6, Math.max(1, Number(node.attrs?.level ?? 2)));
       const text = extractPlainText(kids());
       const id = slugFromHeading(text);
-      return `<h${level} id="${id}">${kids()}</h${level}>`;
+      return `<h${level} id="${id}"${alignClass(node)}>${kids()}</h${level}>`;
     }
     case "bulletList":
       return `<ul>${(node.content ?? []).map(renderNode).join("")}</ul>`;

@@ -10,6 +10,15 @@ function localeDocId(postId: string, locale: Locale) {
   return `${postId}_${locale}`;
 }
 
+/** Firestore rejects explicit `undefined` field values; drop them before writing. */
+function stripUndefined<T extends Record<string, unknown>>(value: T): T {
+  const result = {} as T;
+  for (const key of Object.keys(value) as (keyof T)[]) {
+    if (value[key] !== undefined) result[key] = value[key];
+  }
+  return result;
+}
+
 function mapLegacyBlogPost(id: string, data: FirebaseFirestore.DocumentData, locale: Locale): { shared: PostShared; locale: PostLocale } {
   const html = String(data.html ?? "");
   const title = String(data.title ?? id);
@@ -171,24 +180,32 @@ export async function upsertPostLocale(input: {
 
   const sharedRef = db.collection(COLLECTIONS.posts).doc(input.postId);
   const existing = await sharedRef.get();
+  const existingShared = existing.exists ? (existing.data() as PostShared) : null;
   const sharedPayload: PostShared = {
     id: input.postId,
     authorId: input.shared.authorId,
     thumbnailMediaId: input.shared.thumbnailMediaId,
+    thumbnailUrl: input.shared.thumbnailUrl ?? existingShared?.thumbnailUrl,
     categoryIds: input.shared.categoryIds,
     tagIds: input.shared.tagIds,
     featured: input.shared.featured,
+    pinned: input.shared.pinned ?? existingShared?.pinned,
     homepagePlacement: input.shared.homepagePlacement ?? null,
     commentsEnabled: input.shared.commentsEnabled ?? null,
     isAffiliateContent: input.shared.isAffiliateContent,
+    affiliateDisclosureOverride:
+      input.shared.affiliateDisclosureOverride ?? existingShared?.affiliateDisclosureOverride,
     relatedPostIds: input.shared.relatedPostIds,
-    createdAt: existing.exists
-      ? String((existing.data() as PostShared).createdAt)
-      : now,
+    sources: input.shared.sources ?? existingShared?.sources,
+    canonicalUrl: input.shared.canonicalUrl ?? existingShared?.canonicalUrl,
+    aiGenerated: input.shared.aiGenerated ?? existingShared?.aiGenerated,
+    aiBatchId: input.shared.aiBatchId ?? existingShared?.aiBatchId,
+    aiWarnings: input.shared.aiWarnings ?? existingShared?.aiWarnings,
+    suggestedCategory: input.shared.suggestedCategory ?? existingShared?.suggestedCategory,
+    missingFeaturedImage: input.shared.missingFeaturedImage ?? existingShared?.missingFeaturedImage,
+    createdAt: existingShared ? String(existingShared.createdAt) : now,
     updatedAt: now,
-    createdBy: existing.exists
-      ? String((existing.data() as PostShared).createdBy)
-      : input.shared.updatedBy,
+    createdBy: existingShared ? String(existingShared.createdBy) : input.shared.updatedBy,
     updatedBy: input.shared.updatedBy,
   };
 
@@ -215,10 +232,10 @@ export async function upsertPostLocale(input: {
   };
 
   const batch = db.batch();
-  batch.set(sharedRef, sharedPayload, { merge: true });
+  batch.set(sharedRef, stripUndefined(sharedPayload), { merge: true });
   batch.set(
     db.collection(COLLECTIONS.postLocales).doc(localePayload.id),
-    localePayload,
+    stripUndefined(localePayload),
     { merge: true },
   );
   batch.set(db.collection(COLLECTIONS.postRevisions).doc(), {

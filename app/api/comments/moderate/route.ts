@@ -1,8 +1,9 @@
-﻿import { FirebaseAccessError, getAdminFirestore, requireFirebaseAdmin } from "../../../../lib/firebase/admin";
+﻿import { randomUUID } from "node:crypto";
+import { FirebaseAccessError, getAdminFirestore, requireFirebaseAdmin } from "../../../../lib/firebase/admin";
 import { requirePermission, writeAuditLog } from "../../../../lib/firebase/authz";
 import { getFirebaseServiceIssue } from "../../../../lib/firebase/service-errors";
 import { COLLECTIONS } from "../../../../lib/cms/collections";
-import type { CommentStatus } from "../../../../lib/types/cms";
+import type { CommentStatus, Locale } from "../../../../lib/types/cms";
 
 function errorResponse(error: unknown, fallback: string) {
   if (error instanceof FirebaseAccessError) {
@@ -22,10 +23,26 @@ export async function GET(request: Request) {
     const db = await getAdminFirestore();
     const url = new URL(request.url);
     const status = url.searchParams.get("status");
-    let query = db.collection(COLLECTIONS.comments).orderBy("createdAt", "desc").limit(100);
-    const snap = await query.get();
+    const q = (url.searchParams.get("q") || "").trim().toLowerCase();
+    const snap = await db
+      .collection(COLLECTIONS.comments)
+      .orderBy("createdAt", "desc")
+      .limit(200)
+      .get();
     let comments = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    if (status) comments = comments.filter((c) => (c as { status?: string }).status === status);
+    if (status) {
+      comments = comments.filter((c) => (c as { status?: string }).status === status);
+    }
+    if (q) {
+      comments = comments.filter((c) => {
+        const row = c as { displayName?: string; body?: string; postId?: string };
+        return (
+          row.displayName?.toLowerCase().includes(q) ||
+          row.body?.toLowerCase().includes(q) ||
+          row.postId?.toLowerCase().includes(q)
+        );
+      });
+    }
     return Response.json({ comments });
   } catch (error) {
     return errorResponse(error, "Unable to load comments");
@@ -38,15 +55,48 @@ export async function PATCH(request: Request) {
     const body = (await request.json()) as {
       ids?: string[];
       id?: string;
-      status: CommentStatus;
+      status?: CommentStatus;
+      reply?: {
+        parentId: string;
+        postId: string;
+        locale: Locale;
+        body: string;
+      };
     };
+
+    const db = await getAdminFirestore();
+    const now = new Date().toISOString();
+
+    if (body.reply?.body?.trim()) {
+      const id = randomUUID();
+      await db.collection(COLLECTIONS.comments).doc(id).set({
+        id,
+        postId: body.reply.postId,
+        parentId: body.reply.parentId,
+        displayName: "fikraInAction Editorial",
+        body: body.reply.body.trim().slice(0, 4000),
+        status: "approved",
+        locale: body.reply.locale || "ar",
+        createdAt: now,
+        updatedAt: now,
+        createdBy: auth.email || auth.uid,
+      });
+      await writeAuditLog({
+        actorUid: auth.uid,
+        actorEmail: auth.email,
+        action: "comments.reply",
+        resourceType: "comments",
+        resourceId: id,
+        details: { parentId: body.reply.parentId },
+      });
+      return Response.json({ ok: true, id });
+    }
+
     const ids = body.ids || (body.id ? [body.id] : []);
     if (!ids.length || !body.status) {
       return Response.json({ error: "ids and status required" }, { status: 400 });
     }
-    const db = await getAdminFirestore();
     const batch = db.batch();
-    const now = new Date().toISOString();
     for (const id of ids) {
       batch.set(
         db.collection(COLLECTIONS.comments).doc(id),

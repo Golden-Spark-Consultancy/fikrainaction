@@ -46,14 +46,23 @@ export type PostShared = {
   id: string;
   authorId: string;
   thumbnailMediaId?: string;
+  thumbnailUrl?: string;
   categoryIds: string[];
   tagIds: string[];
   featured: boolean;
+  pinned?: boolean;
   homepagePlacement?: number | null;
   commentsEnabled?: boolean | null;
   isAffiliateContent: boolean;
   affiliateDisclosureOverride?: LocalizedString;
   relatedPostIds: string[];
+  sources?: { title: string; publisher?: string; url: string; accessedAt: string }[];
+  canonicalUrl?: string;
+  aiGenerated?: boolean;
+  aiBatchId?: string;
+  aiWarnings?: string[];
+  suggestedCategory?: string;
+  missingFeaturedImage?: boolean;
   createdAt: string;
   updatedAt: string;
   createdBy: string;
@@ -155,9 +164,15 @@ export type MediaDoc = {
   focalPoint?: { x: number; y: number };
   alt: LocalizedString;
   caption: LocalizedString;
+  credit?: string;
   uploadedBy: string;
   uploadedAt: string;
+  optimizedUrl?: string;
+  thumbUrl?: string;
+  hash?: string;
   usageRefs?: string[];
+  updatedAt?: string;
+  updatedBy?: string;
 };
 
 export type MenuItem = {
@@ -236,6 +251,7 @@ export type SiteSettings = {
   defaultLocale: Locale;
   siteName: string;
   siteUrl: string;
+  siteDescription?: LocalizedString;
   commentsEnabled: boolean;
   commentsRequireModeration: boolean;
   commentsCloseAfterDays?: number | null;
@@ -244,10 +260,77 @@ export type SiteSettings = {
   marketingEnabled: boolean;
   branding: {
     logoUrl?: string;
+    faviconUrl?: string;
     primaryColor?: string;
     accentColor?: string;
   };
   socialLinks: Record<string, string>;
+  seoDefaults?: {
+    titleTemplate?: LocalizedString;
+    defaultMetaDescription?: LocalizedString;
+    defaultOgImageUrl?: string;
+  };
+  affiliateDisclosure?: LocalizedString;
+  postsPerPage?: number;
+  defaultFeaturedImageUrl?: string;
+  youtubeEmbedsEnabled?: boolean;
+  aiSettings?: {
+    maxPostsPerBatch?: number;
+    defaultLanguage?: "ar" | "en" | "both";
+    defaultStyle?: string;
+  };
+  analytics?: {
+    googleAnalyticsId?: string;
+    googleTagManagerId?: string;
+  };
+  notificationEmail?: string;
+  updatedAt: string;
+};
+
+export type AiBatchStatus =
+  | "queued"
+  | "researching"
+  | "generating"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export type AiBatchItemStatus = AiBatchStatus;
+
+export type AiBatch = {
+  id: string;
+  topics: string[];
+  language: "ar" | "en" | "both";
+  style: string;
+  audience: string;
+  length: "short" | "medium" | "long";
+  includeRecommendations: boolean;
+  maxPosts: number;
+  status: AiBatchStatus;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  completedCount: number;
+  failedCount: number;
+  totalCount: number;
+};
+
+export type AiBatchItem = {
+  id: string;
+  batchId: string;
+  topic: string;
+  status: AiBatchItemStatus;
+  postId?: string;
+  locale?: Locale;
+  sources?: { title: string; publisher?: string; url: string; accessedAt: string }[];
+  warnings?: string[];
+  error?: string;
+  categoryId?: string;
+  suggestedCategory?: string;
+  tagIds?: string[];
+  featuredImageStatus?: "ready" | "missing" | "placeholder";
+  languageStatus?: string;
+  createdAt: string;
   updatedAt: string;
 };
 
@@ -293,4 +376,5 @@ export type Permission =
   | "manage_affiliates"
   | "manage_navigation"
   | "manage_pages"
+  | "manage_ai_generation"
   | "import_export";

@@ -66,6 +66,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "manage_affiliates",
     "manage_navigation",
     "manage_pages",
+    "manage_ai_generation",
     "import_export",
   ],
   administrator: [
@@ -80,6 +81,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "manage_affiliates",
     "manage_navigation",
     "manage_pages",
+    "manage_ai_generation",
     "import_export",
   ],
   editor: [
@@ -89,6 +91,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "manage_media",
     "manage_comments",
     "manage_pages",
+    "manage_ai_generation",
   ],
   author: ["edit_own_content", "manage_media"],
   moderator: ["manage_comments"],

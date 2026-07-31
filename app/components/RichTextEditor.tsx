@@ -1,59 +1,541 @@
 "use client";
 
-import { useEditor, EditorContent } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
+import { Node, mergeAttributes } from "@tiptap/core";
+import { EditorContent, useEditor, type Editor } from "@tiptap/react";
+import CharacterCount from "@tiptap/extension-character-count";
+import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
+import TiptapImage from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
-import Image from "@tiptap/extension-image";
-import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
-import Highlight from "@tiptap/extension-highlight";
-import TaskList from "@tiptap/extension-task-list";
-import TaskItem from "@tiptap/extension-task-item";
 import { Table } from "@tiptap/extension-table";
-import { TableRow } from "@tiptap/extension-table-row";
 import { TableCell } from "@tiptap/extension-table-cell";
 import { TableHeader } from "@tiptap/extension-table-header";
-import Superscript from "@tiptap/extension-superscript";
-import Subscript from "@tiptap/extension-subscript";
-import { useEffect } from "react";
+import { TableRow } from "@tiptap/extension-table-row";
+import TaskItem from "@tiptap/extension-task-item";
+import TaskList from "@tiptap/extension-task-list";
+import TextAlign from "@tiptap/extension-text-align";
+import StarterKit from "@tiptap/starter-kit";
+import { common, createLowlight } from "lowlight";
+import { useEffect, useState } from "react";
+import { youtubeEmbedUrl } from "../../lib/sanitize";
 
 type Props = {
   initialContent?: Record<string, unknown> | null;
   onChange?: (json: Record<string, unknown>) => void;
   placeholder?: string;
+  dir?: "rtl" | "ltr";
+  locale?: "ar" | "en";
+  /** Optional callback to open a media picker instead of prompting for a URL. */
+  onRequestMedia?: () => void;
 };
 
-export function RichTextEditor({ initialContent, onChange, placeholder }: Props) {
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        heading: { levels: [2, 3, 4, 5, 6] },
-      }),
-      Underline,
-      Highlight,
-      Superscript,
-      Subscript,
-      Link.configure({
-        openOnClick: false,
-        HTMLAttributes: { rel: "noopener noreferrer" },
-      }),
-      Image,
-      TaskList,
-      TaskItem.configure({ nested: true }),
-      Table.configure({ resizable: true }),
-      TableRow,
-      TableHeader,
-      TableCell,
-      Placeholder.configure({
-        placeholder: placeholder || "Write your article…",
-      }),
-    ],
-    content: initialContent || { type: "doc", content: [{ type: "paragraph" }] },
-    immediatelyRender: false,
-    onUpdate: ({ editor: current }) => {
-      onChange?.(current.getJSON() as Record<string, unknown>);
+const lowlight = createLowlight(common);
+lowlight.registerAlias({ html: "xml" });
+
+const CODE_LANGUAGES: { value: string; label: string }[] = [
+  { value: "javascript", label: "JavaScript" },
+  { value: "typescript", label: "TypeScript" },
+  { value: "python", label: "Python" },
+  { value: "html", label: "HTML" },
+  { value: "css", label: "CSS" },
+  { value: "json", label: "JSON" },
+  { value: "bash", label: "Bash" },
+  { value: "sql", label: "SQL" },
+  { value: "plaintext", label: "Plain text" },
+];
+
+const CALLOUT_VARIANTS = ["info", "warning", "success", "error"] as const;
+type CalloutVariant = (typeof CALLOUT_VARIANTS)[number];
+
+/** Renders a YouTube embed. Stores both the original URL and the resolved embed src. */
+const Youtube = Node.create({
+  name: "youtube",
+  group: "block",
+  atom: true,
+  draggable: true,
+  selectable: true,
+
+  addAttributes() {
+    return {
+      src: { default: null, rendered: false },
+      url: { default: null, rendered: false },
+    };
+  },
+
+  parseHTML() {
+    return [
+      {
+        tag: "div[data-youtube-video]",
+        getAttrs: (dom) => {
+          const iframe = (dom as HTMLElement).querySelector("iframe");
+          return {
+            src: iframe?.getAttribute("src") || null,
+            url: (dom as HTMLElement).getAttribute("data-url") || null,
+          };
+        },
+      },
+    ];
+  },
+
+  renderHTML({ node }) {
+    const src = String(node.attrs.src || "");
+    return [
+      "div",
+      { "data-youtube-video": "", "data-url": String(node.attrs.url || ""), class: "video-embed" },
+      [
+        "iframe",
+        {
+          src,
+          title: "YouTube video",
+          loading: "lazy",
+          allow:
+            "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture",
+          allowfullscreen: "true",
+          frameborder: "0",
+        },
+      ],
+    ];
+  },
+});
+
+/** A highlighted content block, e.g. info / warning / success / error. */
+const Callout = Node.create({
+  name: "callout",
+  group: "block",
+  content: "block+",
+  defining: true,
+
+  addAttributes() {
+    return {
+      variant: { default: "info", rendered: false },
+    };
+  },
+
+  parseHTML() {
+    return [
+      {
+        tag: "div[data-callout]",
+        getAttrs: (dom) => ({
+          variant: (dom as HTMLElement).getAttribute("data-callout") || "info",
+        }),
+      },
+    ];
+  },
+
+  renderHTML({ node }) {
+    const variant = String(node.attrs.variant || "info");
+    return ["div", { "data-callout": variant, class: `callout callout-${variant}` }, 0];
+  },
+});
+
+/** A standalone call-to-action button/link. */
+const ButtonNode = Node.create({
+  name: "button",
+  group: "block",
+  atom: true,
+  draggable: true,
+  selectable: true,
+
+  addAttributes() {
+    return {
+      href: { default: "#", rendered: false },
+      label: { default: "Learn more", rendered: false },
+    };
+  },
+
+  parseHTML() {
+    return [
+      {
+        tag: "div[data-cta-button]",
+        getAttrs: (dom) => {
+          const anchor = (dom as HTMLElement).querySelector("a");
+          return {
+            href: anchor?.getAttribute("href") || "#",
+            label: anchor?.textContent || "Learn more",
+          };
+        },
+      },
+    ];
+  },
+
+  renderHTML({ node }) {
+    const href = String(node.attrs.href || "#");
+    const label = String(node.attrs.label || "Learn more");
+    return [
+      "div",
+      { "data-cta-button": "", class: "content-button-block" },
+      ["a", mergeAttributes({ href, class: "content-button", contenteditable: "false" }), label],
+    ];
+  },
+});
+
+function ToolbarButton({
+  onClick,
+  active,
+  disabled,
+  title,
+  children,
+}: {
+  onClick: () => void;
+  active?: boolean;
+  disabled?: boolean;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      aria-label={title}
+      aria-pressed={active}
+      className={active ? "is-active" : ""}
+      disabled={disabled}
+      onMouseDown={(event) => event.preventDefault()}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Toolbar({
+  editor,
+  fullscreen,
+  onToggleFullscreen,
+  onRequestMedia,
+}: {
+  editor: Editor;
+  fullscreen: boolean;
+  onToggleFullscreen: () => void;
+  onRequestMedia?: () => void;
+}) {
+  function insertLink() {
+    const previousHref = (editor.getAttributes("link").href as string | undefined) || "";
+    const href = window.prompt("Link URL", previousHref || "https://");
+    if (href === null) return;
+    if (!href.trim()) {
+      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+      return;
+    }
+    const openInNewTab = window.confirm("Open this link in a new tab?");
+    editor
+      .chain()
+      .focus()
+      .extendMarkRange("link")
+      .setLink({
+        href: href.trim(),
+        target: openInNewTab ? "_blank" : null,
+        rel: openInNewTab ? "noopener noreferrer" : null,
+      })
+      .run();
+  }
+
+  function insertImage() {
+    if (onRequestMedia) {
+      onRequestMedia();
+      return;
+    }
+    const src = window.prompt("Image URL");
+    if (!src || !src.trim()) return;
+    const alt = window.prompt("Alt text (for accessibility)", "") || "";
+    editor.chain().focus().setImage({ src: src.trim(), alt }).run();
+  }
+
+  function insertYoutube() {
+    const raw = window.prompt("YouTube video URL");
+    if (!raw || !raw.trim()) return;
+    const embed = youtubeEmbedUrl(raw.trim());
+    if (!embed) {
+      window.alert("That doesn't look like a valid YouTube URL.");
+      return;
+    }
+    editor
+      .chain()
+      .focus()
+      .insertContent({ type: "youtube", attrs: { url: raw.trim(), src: embed } })
+      .run();
+  }
+
+  function insertCallout() {
+    const input = window.prompt("Callout type: info, warning, success, or error", "info");
+    if (input === null) return;
+    const normalized = input.trim().toLowerCase();
+    const variant: CalloutVariant = (CALLOUT_VARIANTS as readonly string[]).includes(normalized)
+      ? (normalized as CalloutVariant)
+      : "info";
+    editor.chain().focus().wrapIn("callout", { variant }).run();
+  }
+
+  function insertButtonCta() {
+    const href = window.prompt("Button link URL", "https://");
+    if (!href || !href.trim()) return;
+    const label = window.prompt("Button label", "Learn more") || "Learn more";
+    editor
+      .chain()
+      .focus()
+      .insertContent({ type: "button", attrs: { href: href.trim(), label } })
+      .run();
+  }
+
+  const codeBlockActive = editor.isActive("codeBlock");
+  const currentLanguage = (editor.getAttributes("codeBlock").language as string) || "plaintext";
+
+  return (
+    <div className="rich-editor-toolbar" role="toolbar" aria-label="Formatting">
+      <div className="rich-editor-toolbar-group">
+        <ToolbarButton title="Undo" onClick={() => editor.chain().focus().undo().run()}>
+          ↶
+        </ToolbarButton>
+        <ToolbarButton title="Redo" onClick={() => editor.chain().focus().redo().run()}>
+          ↷
+        </ToolbarButton>
+      </div>
+
+      <div className="rich-editor-toolbar-group">
+        <select
+          title="Paragraph style"
+          value={
+            [1, 2, 3, 4, 5, 6].find((level) => editor.isActive("heading", { level }))
+              ? String([1, 2, 3, 4, 5, 6].find((level) => editor.isActive("heading", { level })))
+              : "paragraph"
+          }
+          onChange={(event) => {
+            const { value } = event.target;
+            if (value === "paragraph") {
+              editor.chain().focus().setParagraph().run();
+              return;
+            }
+            editor
+              .chain()
+              .focus()
+              .toggleHeading({ level: Number(value) as 1 | 2 | 3 | 4 | 5 | 6 })
+              .run();
+          }}
+        >
+          <option value="paragraph">Paragraph</option>
+          <option value="1">Heading 1</option>
+          <option value="2">Heading 2</option>
+          <option value="3">Heading 3</option>
+          <option value="4">Heading 4</option>
+          <option value="5">Heading 5</option>
+          <option value="6">Heading 6</option>
+        </select>
+      </div>
+
+      <div className="rich-editor-toolbar-group">
+        <ToolbarButton
+          title="Bold"
+          active={editor.isActive("bold")}
+          onClick={() => editor.chain().focus().toggleBold().run()}
+        >
+          <strong>B</strong>
+        </ToolbarButton>
+        <ToolbarButton
+          title="Italic"
+          active={editor.isActive("italic")}
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+        >
+          <em>I</em>
+        </ToolbarButton>
+        <ToolbarButton
+          title="Underline"
+          active={editor.isActive("underline")}
+          onClick={() => editor.chain().focus().toggleUnderline().run()}
+        >
+          <span style={{ textDecoration: "underline" }}>U</span>
+        </ToolbarButton>
+        <ToolbarButton
+          title="Strikethrough"
+          active={editor.isActive("strike")}
+          onClick={() => editor.chain().focus().toggleStrike().run()}
+        >
+          <span style={{ textDecoration: "line-through" }}>S</span>
+        </ToolbarButton>
+      </div>
+
+      <div className="rich-editor-toolbar-group">
+        <ToolbarButton
+          title="Align left"
+          active={editor.isActive({ textAlign: "left" })}
+          onClick={() => editor.chain().focus().setTextAlign("left").run()}
+        >
+          ⇤
+        </ToolbarButton>
+        <ToolbarButton
+          title="Align center"
+          active={editor.isActive({ textAlign: "center" })}
+          onClick={() => editor.chain().focus().setTextAlign("center").run()}
+        >
+          ⇔
+        </ToolbarButton>
+        <ToolbarButton
+          title="Align right"
+          active={editor.isActive({ textAlign: "right" })}
+          onClick={() => editor.chain().focus().setTextAlign("right").run()}
+        >
+          ⇥
+        </ToolbarButton>
+        <ToolbarButton
+          title="Justify"
+          active={editor.isActive({ textAlign: "justify" })}
+          onClick={() => editor.chain().focus().setTextAlign("justify").run()}
+        >
+          ≡
+        </ToolbarButton>
+      </div>
+
+      <div className="rich-editor-toolbar-group">
+        <ToolbarButton
+          title="Bullet list"
+          active={editor.isActive("bulletList")}
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+        >
+          • ⋮
+        </ToolbarButton>
+        <ToolbarButton
+          title="Ordered list"
+          active={editor.isActive("orderedList")}
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+        >
+          1. ⋮
+        </ToolbarButton>
+        <ToolbarButton
+          title="Task list"
+          active={editor.isActive("taskList")}
+          onClick={() => editor.chain().focus().toggleTaskList().run()}
+        >
+          ☑
+        </ToolbarButton>
+      </div>
+
+      <div className="rich-editor-toolbar-group">
+        <ToolbarButton
+          title="Blockquote"
+          active={editor.isActive("blockquote")}
+          onClick={() => editor.chain().focus().toggleBlockquote().run()}
+        >
+          ❝
+        </ToolbarButton>
+        <ToolbarButton title="Horizontal rule" onClick={() => editor.chain().focus().setHorizontalRule().run()}>
+          ―
+        </ToolbarButton>
+      </div>
+
+      <div className="rich-editor-toolbar-group">
+        <ToolbarButton
+          title="Code block"
+          active={codeBlockActive}
+          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+        >
+          {"</>"}
+        </ToolbarButton>
+        {codeBlockActive && (
+          <select
+            title="Code language"
+            value={currentLanguage}
+            onChange={(event) =>
+              editor.chain().focus().updateAttributes("codeBlock", { language: event.target.value }).run()
+            }
+          >
+            {CODE_LANGUAGES.map((lang) => (
+              <option key={lang.value} value={lang.value}>
+                {lang.label}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
+
+      <div className="rich-editor-toolbar-group">
+        <ToolbarButton title="Link" active={editor.isActive("link")} onClick={insertLink}>
+          🔗
+        </ToolbarButton>
+        <ToolbarButton title="Image" onClick={insertImage}>
+          🖼
+        </ToolbarButton>
+        <ToolbarButton title="YouTube video" onClick={insertYoutube}>
+          ▶
+        </ToolbarButton>
+        <ToolbarButton title="Callout" active={editor.isActive("callout")} onClick={insertCallout}>
+          ℹ
+        </ToolbarButton>
+        <ToolbarButton title="Button / CTA" onClick={insertButtonCta}>
+          ⛶
+        </ToolbarButton>
+        <ToolbarButton
+          title="Insert table"
+          onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+        >
+          ⊞
+        </ToolbarButton>
+      </div>
+
+      <div className="rich-editor-toolbar-group">
+        <ToolbarButton title={fullscreen ? "Exit fullscreen" : "Fullscreen"} active={fullscreen} onClick={onToggleFullscreen}>
+          {fullscreen ? "⤢" : "⤡"}
+        </ToolbarButton>
+      </div>
+    </div>
+  );
+}
+
+export function RichTextEditor({
+  initialContent,
+  onChange,
+  placeholder,
+  dir,
+  locale,
+  onRequestMedia,
+}: Props) {
+  const [fullscreen, setFullscreen] = useState(false);
+  const resolvedDir: "rtl" | "ltr" = dir || (locale === "ar" ? "rtl" : "ltr");
+
+  const editor = useEditor(
+    {
+      extensions: [
+        StarterKit.configure({
+          heading: { levels: [1, 2, 3, 4, 5, 6] },
+          link: false,
+          codeBlock: false,
+        }),
+        TextAlign.configure({
+          types: ["heading", "paragraph"],
+          alignments: ["left", "center", "right", "justify"],
+        }),
+        CodeBlockLowlight.configure({ lowlight }),
+        Link.configure({
+          openOnClick: false,
+          autolink: true,
+          HTMLAttributes: { rel: "noopener noreferrer" },
+        }),
+        TiptapImage.configure({ inline: false }),
+        TaskList,
+        TaskItem.configure({ nested: true }),
+        Table.configure({ resizable: true }),
+        TableRow,
+        TableHeader,
+        TableCell,
+        Youtube,
+        Callout,
+        ButtonNode,
+        CharacterCount,
+        Placeholder.configure({
+          placeholder: placeholder || "Write your post…",
+        }),
+      ],
+      content: initialContent || { type: "doc", content: [{ type: "paragraph" }] },
+      immediatelyRender: false,
+      editorProps: {
+        attributes: {
+          dir: resolvedDir,
+        },
+      },
+      onUpdate: ({ editor: current }) => {
+        onChange?.(current.getJSON() as Record<string, unknown>);
+      },
     },
-  });
+    [resolvedDir],
+  );
 
   useEffect(() => {
     if (!editor || !initialContent) return;
@@ -64,53 +546,28 @@ export function RichTextEditor({ initialContent, onChange, placeholder }: Props)
 
   if (!editor) return null;
 
+  const characters = editor.storage.characterCount?.characters?.() ?? 0;
+  const words = editor.storage.characterCount?.words?.() ?? 0;
+
   return (
-    <div className="rich-editor">
-      <div className="rich-editor-toolbar" role="toolbar" aria-label="Formatting">
-        <button type="button" onClick={() => editor.chain().focus().toggleBold().run()}>Bold</button>
-        <button type="button" onClick={() => editor.chain().focus().toggleItalic().run()}>Italic</button>
-        <button type="button" onClick={() => editor.chain().focus().toggleUnderline().run()}>Underline</button>
-        <button type="button" onClick={() => editor.chain().focus().toggleStrike().run()}>Strike</button>
-        <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>H2</button>
-        <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>H3</button>
-        <button type="button" onClick={() => editor.chain().focus().toggleBulletList().run()}>List</button>
-        <button type="button" onClick={() => editor.chain().focus().toggleOrderedList().run()}>Ordered</button>
-        <button type="button" onClick={() => editor.chain().focus().toggleTaskList().run()}>Tasks</button>
-        <button type="button" onClick={() => editor.chain().focus().toggleBlockquote().run()}>Quote</button>
-        <button type="button" onClick={() => editor.chain().focus().toggleCodeBlock().run()}>Code</button>
-        <button type="button" onClick={() => editor.chain().focus().setHorizontalRule().run()}>Divider</button>
-        <button
-          type="button"
-          onClick={() => {
-            const href = window.prompt("URL");
-            if (!href) return;
-            editor.chain().focus().extendMarkRange("link").setLink({ href }).run();
-          }}
-        >
-          Link
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            const src = window.prompt("Image URL");
-            if (!src) return;
-            editor.chain().focus().setImage({ src }).run();
-          }}
-        >
-          Image
-        </button>
-        <button
-          type="button"
-          onClick={() =>
-            editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
-          }
-        >
-          Table
-        </button>
-        <button type="button" onClick={() => editor.chain().focus().undo().run()}>Undo</button>
-        <button type="button" onClick={() => editor.chain().focus().redo().run()}>Redo</button>
-      </div>
+    <div
+      className={`rich-editor${fullscreen ? " rich-editor-fullscreen" : ""}`}
+      dir={resolvedDir}
+      style={{
+        fontFamily: resolvedDir === "rtl" ? "var(--font-cairo)" : "var(--font-inter, Inter, sans-serif)",
+      }}
+    >
+      <Toolbar
+        editor={editor}
+        fullscreen={fullscreen}
+        onToggleFullscreen={() => setFullscreen((value) => !value)}
+        onRequestMedia={onRequestMedia}
+      />
       <EditorContent editor={editor} className="rich-editor-surface" />
+      <div className="rich-editor-footer">
+        <span>{characters} characters</span>
+        <span>{words} words</span>
+      </div>
     </div>
   );
 }

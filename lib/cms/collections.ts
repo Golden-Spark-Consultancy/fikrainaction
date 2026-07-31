@@ -22,6 +22,8 @@ export const COLLECTIONS = {
   siteSettings: "siteSettings",
   auditLogs: "auditLogs",
   slugReservations: "slugReservations",
+  aiBatches: "aiBatches",
+  aiBatchItems: "aiBatchItems",
 } as const;
 
 /** Pre-migration collections — keep readable until verified. */

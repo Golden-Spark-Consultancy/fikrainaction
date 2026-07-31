@@ -15,11 +15,7 @@ function errorResponse(error: unknown, fallback: string) {
   );
 }
 
-async function countWhere(
-  collection: string,
-  field: string,
-  value: string,
-): Promise<number> {
+async function countWhere(collection: string, field: string, value: string): Promise<number> {
   try {
     const db = await getAdminFirestore();
     const snap = await db.collection(collection).where(field, "==", value).limit(500).get();
@@ -43,8 +39,10 @@ export async function GET(request: Request) {
       pendingComments,
       spamComments,
       mediaSnap,
-      clicksSnap,
       localesSnap,
+      aiBatchesSnap,
+      aiFailedSnap,
+      recentCommentsSnap,
     ] = await Promise.all([
       countWhere(COLLECTIONS.postLocales, "status", "published"),
       countWhere(COLLECTIONS.postLocales, "status", "draft"),
@@ -56,8 +54,10 @@ export async function GET(request: Request) {
       db.collection(COLLECTIONS.media).limit(500).get().catch(() =>
         db.collection("mediaAssets").limit(500).get().catch(() => null),
       ),
-      db.collection("affiliateClicks").limit(500).get().catch(() => null),
-      db.collection(COLLECTIONS.postLocales).limit(200).get().catch(() => null),
+      db.collection(COLLECTIONS.postLocales).orderBy("updatedAt", "desc").limit(200).get().catch(() => null),
+      db.collection(COLLECTIONS.aiBatches).limit(100).get().catch(() => null),
+      countWhere(COLLECTIONS.aiBatchItems, "status", "failed"),
+      db.collection(COLLECTIONS.comments).orderBy("createdAt", "desc").limit(8).get().catch(() => null),
     ]);
 
     const byPost = new Map<string, Set<string>>();
@@ -91,7 +91,29 @@ export async function GET(request: Request) {
         pendingComments,
         spamComments,
         mediaCount: mediaSnap?.size ?? 0,
-        affiliateClicks: clicksSnap?.size ?? 0,
+        aiBatches: aiBatchesSnap?.size ?? 0,
+        aiFailedItems: aiFailedSnap,
+        recentPosts:
+          localesSnap?.docs.slice(0, 8).map((d) => {
+            const data = d.data();
+            return {
+              id: data.postId || d.id,
+              title: data.title,
+              status: data.status,
+              locale: data.locale,
+              updatedAt: data.updatedAt,
+            };
+          }) ?? [],
+        recentComments:
+          recentCommentsSnap?.docs.map((d) => {
+            const data = d.data();
+            return {
+              id: d.id,
+              displayName: data.displayName,
+              status: data.status,
+              createdAt: data.createdAt,
+            };
+          }) ?? [],
         recentActivity:
           recentActivity?.docs.map((d) => ({ id: d.id, ...d.data() })) ?? [],
       },

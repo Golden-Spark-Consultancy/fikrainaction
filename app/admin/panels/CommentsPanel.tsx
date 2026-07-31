@@ -16,12 +16,15 @@ type Comment = {
 export function CommentsPanel() {
   const [comments, setComments] = useState<Comment[]>([]);
   const [filter, setFilter] = useState("pending");
+  const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const [message, setMessage] = useState("");
+  const [replyFor, setReplyFor] = useState<string | null>(null);
+  const [replyBody, setReplyBody] = useState("");
 
   async function load() {
     const res = await firebaseAuthorizedFetch(
-      `/api/comments/moderate?status=${encodeURIComponent(filter)}`,
+      `/api/comments/moderate?status=${encodeURIComponent(filter)}&q=${encodeURIComponent(query)}`,
     );
     const data = await res.json();
     if (!res.ok) {
@@ -39,6 +42,9 @@ export function CommentsPanel() {
 
   async function moderate(status: string) {
     if (!selected.length) return;
+    if (status === "trash" && !window.confirm(`Move ${selected.length} comment(s) to trash?`)) {
+      return;
+    }
     const res = await firebaseAuthorizedFetch("/api/comments/moderate", {
       method: "PATCH",
       headers: { "content-type": "application/json" },
@@ -50,6 +56,31 @@ export function CommentsPanel() {
       return;
     }
     setMessage(`Updated ${selected.length} comment(s) to ${status}.`);
+    await load();
+  }
+
+  async function sendReply(comment: Comment) {
+    if (!replyBody.trim() || !comment.postId) return;
+    const res = await firebaseAuthorizedFetch("/api/comments/moderate", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        reply: {
+          parentId: comment.id,
+          postId: comment.postId,
+          locale: comment.locale || "ar",
+          body: replyBody.trim(),
+        },
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setMessage(data.error || "Reply failed");
+      return;
+    }
+    setReplyFor(null);
+    setReplyBody("");
+    setMessage("Reply saved as approved comment.");
     await load();
   }
 
@@ -68,6 +99,18 @@ export function CommentsPanel() {
             <option value="spam">Spam</option>
             <option value="trash">Trash</option>
           </select>
+        </div>
+        <div className="posts-toolbar">
+          <input
+            type="search"
+            placeholder="Search comments…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void load();
+            }}
+          />
+          <button type="button" onClick={() => void load()}>Search</button>
         </div>
         <div className="editor-actions" style={{ marginBottom: 16 }}>
           <button type="button" onClick={() => void moderate("approved")}>Approve</button>
@@ -97,6 +140,22 @@ export function CommentsPanel() {
                   {comment.status} · {comment.locale} · post {comment.postId}
                 </small>
                 <p>{comment.body}</p>
+                <button type="button" onClick={() => setReplyFor(comment.id)}>Reply</button>
+                {replyFor === comment.id && (
+                  <div className="form-grid" style={{ marginTop: 8 }}>
+                    <label className="full-field">
+                      Reply
+                      <textarea
+                        rows={3}
+                        value={replyBody}
+                        onChange={(e) => setReplyBody(e.target.value)}
+                      />
+                    </label>
+                    <button type="button" onClick={() => void sendReply(comment)}>
+                      Send reply
+                    </button>
+                  </div>
+                )}
               </div>
             </article>
           ))}
