@@ -78,7 +78,6 @@ export default async function BlogArticlePage({
   let isAffiliate = found?.shared.isAffiliateContent ?? false;
   let commentsEnabled = found?.shared.commentsEnabled !== false;
   let postId = found?.shared.id ?? slug;
-  let altLocalePath: string | null = null;
 
   if (!found) {
     const seed = seedPosts.find((p) => p.slug === slug);
@@ -105,12 +104,6 @@ export default async function BlogArticlePage({
     title = seed.title;
     excerpt = seed.excerpt;
     html = `<p>${seed.excerpt}</p><p>This demonstration article is reserved for editorial expansion in the fikraInAction CMS.</p>`;
-  } else {
-    const other = locale === "ar" ? "en" : "ar";
-    const otherLocale = await getPostLocale(found.shared.id, other).catch(() => null);
-    if (otherLocale?.status === "published" && otherLocale.slug) {
-      altLocalePath = localizedPath(other, `/blog/${otherLocale.slug}`);
-    }
   }
 
   const headings = extractHeadingsFromHtml(html);
@@ -154,19 +147,6 @@ export default async function BlogArticlePage({
                 <span className="blog-article-chip">
                   {t("common.readTime", { minutes: reading })}
                 </span>
-                {publishedAt ? (
-                  <span className="blog-article-chip">
-                    {t("common.published")} {publishedAt.slice(0, 10)}
-                  </span>
-                ) : null}
-                {altLocalePath ? (
-                  <Link
-                    className="blog-article-chip blog-article-chip-link"
-                    href={altLocalePath}
-                  >
-                    {t("common.viewAvailableLocale")}
-                  </Link>
-                ) : null}
               </div>
             </div>
             {isAffiliate && (
