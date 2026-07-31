@@ -31,7 +31,9 @@ export function LanguageSwitcher({ locale }: { locale: Locale }) {
     }
 
     let cancelled = false;
-    setHref(fallback);
+    // Never assume the other locale uses the same slug — that causes public 404s.
+    const blogFallback = localizedPath(other, "/blog");
+    setHref(blogFallback);
 
     fetch(
       `/api/locale-alternate?locale=${encodeURIComponent(locale)}&slug=${encodeURIComponent(slug)}`,
@@ -44,10 +46,10 @@ export function LanguageSwitcher({ locale }: { locale: Locale }) {
           return;
         }
         // Linked translation missing/unpublished — land on the blog index in the other language.
-        setHref(localizedPath(other, "/blog"));
+        setHref(blogFallback);
       })
       .catch(() => {
-        if (!cancelled) setHref(fallback);
+        if (!cancelled) setHref(blogFallback);
       });
 
     return () => {

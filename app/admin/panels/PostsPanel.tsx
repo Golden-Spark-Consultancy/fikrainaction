@@ -22,10 +22,18 @@ type RevisionEntry = {
   createdBy?: string;
 };
 
+type SiblingInfo = {
+  locale: Locale;
+  title: string;
+  slug: string;
+  status: string;
+} | null;
+
 type EditorState = {
   postId: string;
   locale: Locale;
   hasTranslation: boolean;
+  sibling: SiblingInfo;
   title: string;
   slug: string;
   excerpt: string;
@@ -69,6 +77,7 @@ function blankEditor(locale: Locale, seed?: Partial<EditorState>): EditorState {
     postId: "",
     locale,
     hasTranslation: false,
+    sibling: null,
     title: "",
     slug: "",
     excerpt: "",
@@ -96,6 +105,28 @@ function blankEditor(locale: Locale, seed?: Partial<EditorState>): EditorState {
     sources: "",
     dirty: false,
     ...seed,
+  };
+}
+
+function sharedFieldsFromEditor(editor: EditorState): Partial<EditorState> {
+  return {
+    postId: editor.postId,
+    featured: editor.featured,
+    pinned: editor.pinned,
+    commentsEnabled: editor.commentsEnabled,
+    isAffiliateContent: editor.isAffiliateContent,
+    categoryIds: editor.categoryIds,
+    tagIds: editor.tagIds,
+    relatedPostIds: editor.relatedPostIds,
+    thumbnailMediaId: editor.thumbnailMediaId,
+    thumbnailUrl: editor.thumbnailUrl,
+    sources: editor.sources,
+    sibling: {
+      locale: editor.locale,
+      title: editor.title,
+      slug: editor.slug,
+      status: editor.status,
+    },
   };
 }
 
@@ -128,12 +159,15 @@ function buildEditorState(
   locale: Locale,
   shared: Record<string, unknown>,
   localeData: Record<string, unknown> | null,
+  sibling?: SiblingInfo,
 ): EditorState {
   const seo = (localeData?.seo || {}) as Record<string, unknown>;
   const affiliateDisclosureOverride = (shared.affiliateDisclosureOverride || {}) as Record<string, unknown>;
+  const sharedSources = (shared as { sources?: unknown }).sources;
   return blankEditor(locale, {
     postId,
     hasTranslation: Boolean(localeData),
+    sibling: sibling ?? null,
     title: String(localeData?.title || ""),
     slug: String(localeData?.slug || ""),
     excerpt: String(localeData?.excerpt || ""),
@@ -158,11 +192,26 @@ function buildEditorState(
     thumbnailUrl: String((shared as { thumbnailUrl?: string }).thumbnailUrl || ""),
     thumbnailAlt: String(localeData?.thumbnailAlt || ""),
     caption: String(localeData?.caption || ""),
-    sources: Array.isArray((localeData as { sources?: unknown[] } | null)?.sources)
-      ? JSON.stringify((localeData as { sources?: unknown[] }).sources, null, 2)
-      : String((localeData as { sources?: string } | null)?.sources || ""),
+    sources: Array.isArray(sharedSources)
+      ? JSON.stringify(sharedSources, null, 2)
+      : Array.isArray((localeData as { sources?: unknown[] } | null)?.sources)
+        ? JSON.stringify((localeData as { sources?: unknown[] }).sources, null, 2)
+        : String((localeData as { sources?: string } | null)?.sources || ""),
     dirty: false,
   });
+}
+
+function parseSibling(raw: unknown): SiblingInfo {
+  if (!raw || typeof raw !== "object") return null;
+  const row = raw as Record<string, unknown>;
+  const locale = row.locale === "ar" || row.locale === "en" ? (row.locale as Locale) : null;
+  if (!locale) return null;
+  return {
+    locale,
+    title: String(row.title || ""),
+    slug: String(row.slug || ""),
+    status: String(row.status || "draft"),
+  };
 }
 
 export function PostsPanel({
@@ -236,7 +285,15 @@ export function PostsPanel({
           const shared = (data.article.shared || {}) as Record<string, unknown>;
           const localeData = data.article.locale as Record<string, unknown>;
           setRevisions(data.article.revisions || []);
-          setEditor(buildEditorState(initialPostId, locale, shared, localeData));
+          setEditor(
+            buildEditorState(
+              initialPostId,
+              locale,
+              shared,
+              localeData,
+              parseSibling(data.article.sibling),
+            ),
+          );
           setMessage(`Opened AI draft (${locale}).`);
           return true;
         };
@@ -311,21 +368,79 @@ export function PostsPanel({
     });
   }
 
-  async function openPostById(postId: string, locale: Locale) {
+  async function openPostById(
+    postId: string,
+    locale: Locale,
+    options: { allowMissingLocale?: boolean; fallbackFrom?: EditorState } = {},
+  ) {
     try {
       const res = await firebaseAuthorizedFetch(
         `/api/articles?id=${encodeURIComponent(postId)}&locale=${encodeURIComponent(locale)}`,
       );
       const data = await res.json();
       if (!res.ok) {
+        if (options.allowMissingLocale && options.fallbackFrom) {
+          setRevisions([]);
+          setEditor(
+            blankEditor(locale, {
+              ...sharedFieldsFromEditor(options.fallbackFrom),
+              postId,
+              hasTranslation: false,
+              dirty: false,
+            }),
+          );
+          setMessage(
+            `No ${locale === "ar" ? "Arabic" : "English"} version yet — edit and save to link it to this post.`,
+          );
+          return;
+        }
         setMessage(data.error || "Unable to open post.");
         return;
       }
       const article = data.article;
       const shared = (article.shared || {}) as Record<string, unknown>;
       const localeData = (article.locale || null) as Record<string, unknown> | null;
+      const sibling = parseSibling(article.sibling);
       setRevisions(article.revisions || []);
-      setEditor(buildEditorState(postId, locale, shared, localeData));
+
+      if (!localeData && options.allowMissingLocale) {
+        const base = options.fallbackFrom;
+        setEditor(
+          blankEditor(locale, {
+            ...(base ? sharedFieldsFromEditor(base) : {}),
+            postId,
+            featured: Boolean(shared.featured ?? base?.featured),
+            pinned: Boolean(shared.pinned ?? base?.pinned),
+            commentsEnabled: shared.commentsEnabled !== false,
+            isAffiliateContent: Boolean(shared.isAffiliateContent ?? base?.isAffiliateContent),
+            categoryIds: ((shared.categoryIds as string[]) || base?.categoryIds || []).filter(Boolean),
+            tagIds: Array.isArray(shared.tagIds)
+              ? (shared.tagIds as string[]).join(", ")
+              : base?.tagIds || "",
+            relatedPostIds: Array.isArray(shared.relatedPostIds)
+              ? (shared.relatedPostIds as string[]).join(", ")
+              : base?.relatedPostIds || "",
+            thumbnailMediaId: String(shared.thumbnailMediaId || base?.thumbnailMediaId || ""),
+            thumbnailUrl: String(shared.thumbnailUrl || base?.thumbnailUrl || ""),
+            sibling: base
+              ? {
+                  locale: base.locale,
+                  title: base.title,
+                  slug: base.slug,
+                  status: base.status,
+                }
+              : sibling,
+            hasTranslation: false,
+            dirty: false,
+          }),
+        );
+        setMessage(
+          `No ${locale === "ar" ? "Arabic" : "English"} version yet — edit and save to link it to this post.`,
+        );
+        return;
+      }
+
+      setEditor(buildEditorState(postId, locale, shared, localeData, sibling));
       setMessage("");
     } catch {
       setMessage("Unable to open post.");
@@ -346,10 +461,21 @@ export function PostsPanel({
     if (!editor || editor.locale === nextLocale) return;
     if (editor.dirty && !window.confirm("Discard unsaved changes and switch language?")) return;
     if (editor.postId) {
-      await openPostById(editor.postId, nextLocale);
+      // Keep the same postId so AR/EN stay linked even when the other locale is missing.
+      await openPostById(editor.postId, nextLocale, {
+        allowMissingLocale: true,
+        fallbackFrom: editor,
+      });
       return;
     }
-    setEditor(blankEditor(nextLocale));
+    setEditor(
+      blankEditor(nextLocale, {
+        ...sharedFieldsFromEditor(editor),
+        postId: "",
+        hasTranslation: false,
+        dirty: false,
+      }),
+    );
   }
 
   async function save(state: EditorState, isAutosave = false) {
@@ -401,16 +527,23 @@ export function PostsPanel({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Save failed");
       const saved = data.article;
-      setEditor({
-        ...state,
-        postId: saved.shared.id,
-        slug: saved.locale.slug,
-        hasTranslation: true,
-        dirty: false,
+      const savedPostId = String(saved.shared?.id || state.postId);
+      setEditor((current) => {
+        if (!current || current.locale !== state.locale) return current;
+        return {
+          ...current,
+          ...state,
+          postId: savedPostId,
+          slug: String(saved.locale?.slug || state.slug),
+          hasTranslation: true,
+          dirty: false,
+        };
       });
       setSaveState("saved");
-      if (!isAutosave) setMessage(`Saved (${state.status}).`);
-      await loadList();
+      if (!isAutosave) {
+        setMessage(`Saved (${state.status}). Switch language tabs to edit the linked translation.`);
+        await loadList();
+      }
     } catch (error) {
       setSaveState("error");
       setMessage(error instanceof Error ? error.message : "Save failed");
@@ -627,24 +760,49 @@ export function PostsPanel({
               className={editor.locale === "ar" ? "active" : ""}
               onClick={() => void switchLocale("ar")}
             >
-              العربية (AR){editor.locale === "ar" && !editor.hasTranslation ? " · new" : ""}
+              العربية (AR)
+              {editor.locale === "ar"
+                ? editor.hasTranslation
+                  ? ""
+                  : " · drafting"
+                : editor.sibling?.locale === "ar"
+                  ? ""
+                  : " · missing"}
             </button>
             <button
               type="button"
               className={editor.locale === "en" ? "active" : ""}
               onClick={() => void switchLocale("en")}
             >
-              English (EN){editor.locale === "en" && !editor.hasTranslation ? " · new" : ""}
+              English (EN)
+              {editor.locale === "en"
+                ? editor.hasTranslation
+                  ? ""
+                  : " · drafting"
+                : editor.sibling?.locale === "en"
+                  ? ""
+                  : " · missing"}
             </button>
           </div>
           <div className="post-locale-links">
-            {editor.postId && editor.slug ? (
+            {editor.postId ? (
+              <small className="post-link-id" title={editor.postId}>
+                Linked id · {editor.postId.slice(0, 8)}
+              </small>
+            ) : null}
+            {editor.postId && editor.slug && editor.status === "published" ? (
               <a href={`/${editor.locale}/blog/${editor.slug}`} target="_blank" rel="noreferrer">
                 Preview ↗
               </a>
+            ) : editor.postId && editor.slug ? (
+              <span className="post-preview-hint" title="Publish this locale to preview on the public site">
+                Preview after publish
+              </span>
             ) : null}
             <button type="button" className="btn-link" onClick={() => void switchLocale(otherLocale)}>
-              Edit {otherLocale === "ar" ? "Arabic" : "English"}
+              {editor.sibling?.locale === otherLocale
+                ? `Edit ${otherLocale === "ar" ? "Arabic" : "English"}`
+                : `Add ${otherLocale === "ar" ? "Arabic" : "English"}`}
             </button>
           </div>
         </div>
@@ -714,6 +872,7 @@ export function PostsPanel({
                 <small>TipTap editor · {editor.locale.toUpperCase()}</small>
               </div>
               <RichTextEditor
+                key={`${editor.postId || "new"}-${editor.locale}`}
                 initialContent={editor.content}
                 locale={editor.locale}
                 dir={editor.locale === "ar" ? "rtl" : "ltr"}

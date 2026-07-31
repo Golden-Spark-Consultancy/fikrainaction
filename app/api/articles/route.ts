@@ -77,11 +77,39 @@ export async function GET(request: Request) {
     const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get("pageSize") || 50)));
 
     if (id) {
+      const otherLocale: Locale = locale === "ar" ? "en" : "ar";
       const shared = await db.collection(COLLECTIONS.posts).doc(id).get();
-      const localeDoc = await db
+      let localeDoc = await db
         .collection(COLLECTIONS.postLocales)
         .doc(`${id}_${locale}`)
         .get();
+      // Fallback when doc id drifted but postId field is correct.
+      if (!localeDoc.exists) {
+        const byField = await db
+          .collection(COLLECTIONS.postLocales)
+          .where("postId", "==", id)
+          .where("locale", "==", locale)
+          .limit(1)
+          .get()
+          .catch(() => null);
+        if (byField && !byField.empty) localeDoc = byField.docs[0];
+      }
+
+      let siblingDoc = await db
+        .collection(COLLECTIONS.postLocales)
+        .doc(`${id}_${otherLocale}`)
+        .get();
+      if (!siblingDoc.exists) {
+        const siblingByField = await db
+          .collection(COLLECTIONS.postLocales)
+          .where("postId", "==", id)
+          .where("locale", "==", otherLocale)
+          .limit(1)
+          .get()
+          .catch(() => null);
+        if (siblingByField && !siblingByField.empty) siblingDoc = siblingByField.docs[0];
+      }
+
       const revisions = await db
         .collection(COLLECTIONS.postRevisions)
         .where("postId", "==", id)
@@ -90,7 +118,7 @@ export async function GET(request: Request) {
         .get()
         .catch(() => null);
 
-      if (!shared.exists && !localeDoc.exists) {
+      if (!shared.exists && !localeDoc.exists && !siblingDoc.exists) {
         const legacy = await db.collection("blogPosts").doc(id).get();
         if (!legacy.exists) return Response.json({ error: "Not found" }, { status: 404 });
         const data = legacy.data() || {};
@@ -117,17 +145,40 @@ export async function GET(request: Request) {
               status: data.status || "draft",
               seo: {},
             },
+            sibling: null,
             revisions: [],
             legacy: true,
           },
         });
       }
 
+      const siblingData = siblingDoc.exists ? siblingDoc.data() || {} : null;
+
       return Response.json({
         article: {
           id,
-          shared: shared.exists ? { id, ...shared.data() } : null,
+          shared: shared.exists
+            ? { id, ...shared.data() }
+            : {
+                id,
+                authorId: "unknown",
+                categoryIds: [],
+                tagIds: [],
+                featured: false,
+                commentsEnabled: true,
+                isAffiliateContent: false,
+                relatedPostIds: [],
+              },
+          // null locale = linked translation not created yet (editor opens blank for this locale)
           locale: localeDoc.exists ? localeDoc.data() : null,
+          sibling: siblingData
+            ? {
+                locale: otherLocale,
+                title: siblingData.title || "",
+                slug: siblingData.slug || "",
+                status: siblingData.status || "draft",
+              }
+            : null,
           revisions:
             revisions?.docs
               .map((d) => ({ id: d.id, ...d.data() }))
@@ -158,9 +209,10 @@ export async function GET(request: Request) {
 
     let articles = (localesSnap?.docs.map((d) => {
       const data = d.data();
-      const docId = String(data.postId || d.id);
+      // Prefer explicit postId so AR/EN rows share one id for linking.
+      const rawPostId = data.postId ? String(data.postId) : String(d.id).replace(/_(ar|en)$/i, "");
       return {
-        id: docId.replace(/_(ar|en)$/i, ""),
+        id: rawPostId,
         locale: data.locale,
         title: data.title || "Untitled",
         slug: data.slug || "",
