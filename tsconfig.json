@@ -30,5 +30,13 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "worker"]
+  "exclude": [
+    "node_modules",
+    "worker",
+    "functions",
+    "dist",
+    ".next",
+    ".wrangler",
+    ".sites-runtime"
+  ]
 }
