@@ -9,7 +9,7 @@ import {
 import { createTranslator } from "../../../../lib/i18n/translate";
 import { buildPageMetadata } from "../../../../lib/seo/metadata";
 import { categories as legacyCategories } from "../../../../lib/data";
-import { Breadcrumbs } from "../../../components/Breadcrumbs";
+import { Breadcrumbs, type Crumb } from "../../../components/Breadcrumbs";
 import { PostCard } from "../../../components/PostCard";
 
 function categoryLabel(cat: { locales: { ar?: { name?: string }; en?: { name?: string } }; id: string }, locale: Locale) {
@@ -63,7 +63,7 @@ export default async function CategoryPage({
     ? await listPublishedPosts(locale, { limit: 24, categoryId: cms.id }).catch(() => [])
     : [];
 
-  const crumbs = [{ label: t("nav.home"), href: localizedPath(locale) }];
+  const crumbs: Crumb[] = [{ label: t("nav.home"), href: localizedPath(locale) }];
   if (cms?.parentId) {
     const parent = await getCategoryById(cms.parentId).catch(() => null);
     if (parent) {
