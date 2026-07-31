@@ -8,6 +8,7 @@ import {
 import { createTranslator } from "../../../lib/i18n/translate";
 import { buildPageMetadata } from "../../../lib/seo/metadata";
 import { createSearchProvider } from "../../../lib/cms/search";
+import { SearchBox } from "../../components/SearchBox";
 
 export async function generateMetadata({
   params,
@@ -38,36 +39,52 @@ export default async function SearchPage({
   const locale = raw as Locale;
   const { q = "" } = await searchParams;
   const t = createTranslator(locale);
-  const hits = q
-    ? await createSearchProvider().search(q, locale, { limit: 30 })
-    : [];
+  const provider = createSearchProvider();
+  const [hits, suggestions] = q
+    ? await Promise.all([
+        provider.search(q, locale, { limit: 30 }),
+        provider.suggest(q, locale, { limit: 6 }),
+      ])
+    : [[], []];
 
   return (
     <main id="main-content" className="container" style={{ paddingBlock: 64 }}>
       <p className="micro-label">fikraInAction</p>
       <h1>{t("nav.search")}</h1>
-      <form className="hero-search" action={localizedPath(locale, "/search")} style={{ marginTop: 24 }}>
-        <span aria-hidden="true">⌕</span>
-        <label className="sr-only" htmlFor="search-q">
-          {t("nav.search")}
-        </label>
-        <input id="search-q" name="q" defaultValue={q} placeholder={t("common.searchPlaceholder")} />
-        <button type="submit">{t("nav.search")}</button>
-      </form>
+      <SearchBox locale={locale} initialQuery={q} />
+      {q && suggestions.length > 0 && (
+        <p className="search-suggestions">
+          {suggestions.map((item) => (
+            <Link
+              key={item}
+              href={`${localizedPath(locale, "/search")}?q=${encodeURIComponent(item)}`}
+            >
+              {item}
+            </Link>
+          ))}
+        </p>
+      )}
       <div style={{ marginTop: 32 }}>
         {!q && <p>{t("common.searchPlaceholder")}</p>}
         {q && hits.length === 0 && <p>{t("common.noResults")}</p>}
         <div className="post-grid">
-          {hits.map((hit) => (
-            <article className="post-card" key={`${hit.type}-${hit.id}`}>
-              <h2>
-                <Link href={localizedPath(locale, `/blog/${hit.slug}`)}>
-                  {hit.title}
-                </Link>
-              </h2>
-              <p>{hit.excerpt}</p>
-            </article>
-          ))}
+          {hits.map((hit) => {
+            const href =
+              hit.type === "category"
+                ? localizedPath(locale, `/category/${hit.slug}`)
+                : hit.type === "tool"
+                  ? localizedPath(locale, `/tools/${hit.slug}`)
+                  : localizedPath(locale, `/blog/${hit.slug}`);
+            return (
+              <article className="post-card" key={`${hit.type}-${hit.id}`}>
+                <p className="micro-label">{hit.type}</p>
+                <h2>
+                  <Link href={href}>{hit.title}</Link>
+                </h2>
+                <p>{hit.excerpt}</p>
+              </article>
+            );
+          })}
         </div>
       </div>
     </main>

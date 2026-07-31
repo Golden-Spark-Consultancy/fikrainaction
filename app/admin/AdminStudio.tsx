@@ -6,8 +6,26 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { GeneratedPage, GenerationInput } from "../../lib/generator";
 import { firebaseAuthorizedFetch } from "../../lib/firebase/api";
+import { ArticlesPanel } from "./panels/ArticlesPanel";
+import { CommentsPanel } from "./panels/CommentsPanel";
+import { DashboardPanel } from "./panels/DashboardPanel";
+import { SiteConfigPanel } from "./panels/SiteConfigPanel";
+import { ToolsPanel } from "./panels/ToolsPanel";
 
-type AdminView = "overview" | "generator" | "pages" | "products" | "affiliates" | "blog" | "media" | "analytics";
+type AdminView =
+  | "overview"
+  | "cms-dashboard"
+  | "articles"
+  | "generator"
+  | "pages"
+  | "products"
+  | "affiliates"
+  | "blog"
+  | "comments"
+  | "site-config"
+  | "cms-tools"
+  | "media"
+  | "analytics";
 type SavedPage = { id: string; title: string; slug: string; status: string; pageType: string; affiliateUrl?: string; updatedAt: string };
 type Product = {
   id: string;
@@ -41,7 +59,21 @@ type EditablePage = SavedPage & { html: string; seoTitle?: string; metaDescripti
 const initialInput: GenerationInput = { name: "", type: "AI tool", category: "AI Tools", description: "", officialUrl: "", affiliateUrl: "", audience: "", features: "", pricing: "", pageType: "Landing page", tone: "Practical and credible" };
 const initialProduct = { ...initialInput, status: "active" };
 const initialPost = { title: "", category: "AI Tools", contentType: "Tutorial", excerpt: "", content: "", status: "draft" };
-const viewTitles: Record<AdminView, string> = { overview: "Overview", generator: "AI landing page generator", pages: "Landing pages", products: "Products", affiliates: "Affiliate links", blog: "Blog", media: "Firebase media library", analytics: "Affiliate analytics" };
+const viewTitles: Record<AdminView, string> = {
+  overview: "Overview",
+  "cms-dashboard": "CMS dashboard",
+  articles: "Articles (TipTap)",
+  generator: "AI landing page generator",
+  pages: "Landing pages",
+  products: "Products",
+  affiliates: "Affiliate links",
+  blog: "Legacy blog HTML",
+  comments: "Comments",
+  "site-config": "Site config",
+  "cms-tools": "Redirects & import",
+  media: "Firebase media library",
+  analytics: "Affiliate analytics",
+};
 
 function destinationHost(value: string) {
   try { return new URL(value).hostname.replace(/^www\./, ""); } catch { return value; }
@@ -276,11 +308,16 @@ export function AdminStudio({ user, onSignOut }: { user: { name: string; email: 
         <Link className="brand admin-brand" href="/"><span className="brand-mark"><i>F</i><b>→</b></span><span>Fikra<small>admin studio</small></span></Link>
         <nav aria-label="Administration sections">
           <button className={view === "overview" ? "active" : ""} onClick={() => changeView("overview")}><span>⌂</span> Overview</button>
+          <button className={view === "cms-dashboard" ? "active" : ""} onClick={() => changeView("cms-dashboard")}><span>▣</span> CMS dashboard</button>
+          <button className={view === "articles" ? "active" : ""} onClick={() => changeView("articles")}><span>✎</span> Articles</button>
+          <button className={view === "comments" ? "active" : ""} onClick={() => changeView("comments")}><span>💬</span> Comments</button>
+          <button className={view === "site-config" ? "active" : ""} onClick={() => changeView("site-config")}><span>☰</span> Site config</button>
+          <button className={view === "cms-tools" ? "active" : ""} onClick={() => changeView("cms-tools")}><span>⇄</span> Redirects / IO</button>
           <button className={view === "generator" ? "active" : ""} onClick={() => changeView("generator")}><span>✦</span> AI page generator</button>
           <button className={view === "pages" ? "active" : ""} onClick={() => changeView("pages")}><span>▤</span> Landing pages <i>{pages.length}</i></button>
           <button className={view === "products" ? "active" : ""} onClick={() => changeView("products")}><span>◫</span> Products <i>{products.length}</i></button>
           <button className={view === "affiliates" ? "active" : ""} onClick={() => changeView("affiliates")}><span>↗</span> Affiliate links</button>
-          <button className={view === "blog" ? "active" : ""} onClick={() => changeView("blog")}><span>✎</span> Blog <i>{blogPosts.length}</i></button>
+          <button className={view === "blog" ? "active" : ""} onClick={() => changeView("blog")}><span>HTML</span> Legacy blog <i>{blogPosts.length}</i></button>
           <button className={view === "media" ? "active" : ""} onClick={openMedia}><span>▧</span> Media <i>{assets.length}</i></button>
           <button className={view === "analytics" ? "active" : ""} onClick={openAnalytics}><span>⌁</span> Analytics</button>
         </nav>
@@ -290,7 +327,13 @@ export function AdminStudio({ user, onSignOut }: { user: { name: string; email: 
         <header className="admin-topbar"><div><p className="micro-label">Content command centre</p><h1>{viewTitles[view]}</h1></div><button onClick={() => changeView("generator")}>+ Create landing page</button></header>
         {platformNotice && <aside className="admin-platform-notice" role="alert"><div><strong>Firebase setup required</strong><p>{platformNotice.message}</p></div><a href={platformNotice.setupUrl} target="_blank" rel="noopener noreferrer">Open Firebase setup ↗</a></aside>}
 
-        {view === "overview" && <div className="admin-view"><section className="stat-grid"><article><span>Published pages</span><strong>{publishedCount}</strong><small>Live and indexable</small></article><article><span>Drafts</span><strong>{pages.filter((page) => page.status === "draft").length}</strong><small>Awaiting review</small></article><article><span>Tracked products</span><strong>{activeProducts}</strong><small>Active affiliate catalogue</small></article><article><span>Blog posts</span><strong>{blogPosts.filter((post) => post.status === "published").length}</strong><small>Published editorial guides</small></article></section><section className="admin-panel welcome-panel"><div><p className="micro-label">Recommended next action</p><h2>Create your first real affiliate landing page.</h2><p>Enter verified product information, generate a structured draft, edit the content or HTML, then publish it to its own review URL.</p><button onClick={() => changeView("generator")}>Start generating <span>→</span></button></div><div className="workflow-steps"><span className="done">1</span><p><strong>Add product facts</strong><small>URLs, audience, pricing and features</small></p><span>2</span><p><strong>Generate & review</strong><small>Structured content, SEO and disclosure</small></p><span>3</span><p><strong>Publish & track</strong><small>Unique URL and affiliate analytics</small></p></div></section><section className="admin-panel"><div className="panel-title"><div><p className="micro-label">Recent content</p><h2>Landing pages</h2></div><button onClick={() => changeView("pages")}>View all →</button></div><PageTable pages={pages} /></section></div>}
+        {view === "overview" && <div className="admin-view"><section className="stat-grid"><article><span>Published pages</span><strong>{publishedCount}</strong><small>Live and indexable</small></article><article><span>Drafts</span><strong>{pages.filter((page) => page.status === "draft").length}</strong><small>Awaiting review</small></article><article><span>Tracked products</span><strong>{activeProducts}</strong><small>Active affiliate catalogue</small></article><article><span>Blog posts</span><strong>{blogPosts.filter((post) => post.status === "published").length}</strong><small>Published editorial guides</small></article></section><section className="admin-panel welcome-panel"><div><p className="micro-label">Recommended next action</p><h2>Create a bilingual TipTap article.</h2><p>Use Articles for Arabic/English editorial content with autosave, statuses, and revisions. Keep the AI generator for affiliate landing pages.</p><button onClick={() => changeView("articles")}>Open articles <span>→</span></button></div><div className="workflow-steps"><span className="done">1</span><p><strong>Write in TipTap</strong><small>Structured blocks, code, embeds</small></p><span>2</span><p><strong>Review & schedule</strong><small>Independent locale statuses</small></p><span>3</span><p><strong>Publish & track</strong><small>SEO, comments, affiliates</small></p></div></section><section className="admin-panel"><div className="panel-title"><div><p className="micro-label">Recent content</p><h2>Landing pages</h2></div><button onClick={() => changeView("pages")}>View all →</button></div><PageTable pages={pages} /></section></div>}
+
+        {view === "cms-dashboard" && <DashboardPanel onCreateArticle={() => changeView("articles")} />}
+        {view === "articles" && <ArticlesPanel />}
+        {view === "comments" && <CommentsPanel />}
+        {view === "site-config" && <SiteConfigPanel />}
+        {view === "cms-tools" && <ToolsPanel />}
 
         {view === "generator" && <div className="admin-view generator-layout">
           <section className="generator-form admin-panel"><div className="panel-title"><div><p className="micro-label">One-step generator</p><h2>Paste the product URL</h2></div><span className="required-note">Nothing else required</span></div>

@@ -26,7 +26,16 @@ export function AdminGate() {
         return;
       }
       const token = await nextUser.getIdTokenResult(true);
-      setAuthorized(token.claims.admin === true || nextUser.email?.toLowerCase() === administratorEmail);
+      const role = typeof token.claims.role === "string" ? token.claims.role : "";
+      setAuthorized(
+        token.claims.admin === true ||
+          role === "owner" ||
+          role === "administrator" ||
+          role === "editor" ||
+          role === "author" ||
+          role === "moderator" ||
+          nextUser.email?.toLowerCase() === administratorEmail,
+      );
       setLoading(false);
     });
   }, []);

@@ -19,7 +19,9 @@
     "test": "node --test tests/unit/*.test.mjs tests/rendered-html.test.mjs",
     "test:html": "node --test tests/rendered-html.test.mjs",
     "test:unit": "node --test tests/unit/*.test.mjs",
+    "test:e2e": "playwright test",
     "test:sites": "npm run build:sites && node --test tests/sites-preview.test.mjs",
+    "test:rules": "node --test tests/unit/security-config.test.mjs",
     "validate:artifact": "bash scripts/validate-artifact.sh",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern functions/lib",
     "migrate:dry-run": "node scripts/migrate-content.mjs --dry-run",
@@ -82,6 +84,7 @@
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.37.1",
+    "@playwright/test": "^1.54.2",
     "@tailwindcss/postcss": "4.2.1",
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",

@@ -3,6 +3,7 @@ import { normalizeArabicSearchText, type Locale } from "../i18n/config";
 import type { PostLocale } from "../types/cms";
 import { COLLECTIONS } from "./collections";
 import { listPublishedPosts } from "./posts";
+import { categories, posts as seedPosts, tools } from "../data";
 
 export type SearchHit = {
   id: string;
@@ -10,11 +11,23 @@ export type SearchHit = {
   excerpt: string;
   slug: string;
   locale: Locale;
-  type: "post" | "page" | "category" | "tag" | "author";
+  type: "post" | "page" | "category" | "tag" | "author" | "tool";
+  score: number;
 };
 
 export interface SearchProvider {
   search(query: string, locale: Locale, options?: { limit?: number }): Promise<SearchHit[]>;
+  suggest(query: string, locale: Locale, options?: { limit?: number }): Promise<string[]>;
+}
+
+function scoreMatch(haystack: string, needle: string): number {
+  if (!needle) return 0;
+  if (haystack === needle) return 100;
+  if (haystack.startsWith(needle)) return 80;
+  if (haystack.includes(needle)) return 50;
+  const parts = needle.split(/\s+/).filter(Boolean);
+  const hits = parts.filter((part) => haystack.includes(part)).length;
+  return hits ? (hits / parts.length) * 40 : 0;
 }
 
 class FirestoreSearchProvider implements SearchProvider {
@@ -22,6 +35,8 @@ class FirestoreSearchProvider implements SearchProvider {
     const limit = Math.min(options.limit ?? 20, 50);
     const normalized = normalizeArabicSearchText(query);
     if (!normalized) return [];
+
+    const hits: SearchHit[] = [];
 
     try {
       const db = await getAdminFirestore();
@@ -32,39 +47,97 @@ class FirestoreSearchProvider implements SearchProvider {
         .limit(100)
         .get();
 
-      const hits = snap.docs
-        .map((d) => d.data() as PostLocale)
-        .filter((p) => p.searchText?.includes(normalized) || normalizeArabicSearchText(p.title).includes(normalized))
-        .slice(0, limit)
-        .map((p) => ({
-          id: p.postId,
-          title: p.title,
-          excerpt: p.excerpt,
-          slug: p.slug,
-          locale: p.locale,
-          type: "post" as const,
-        }));
-
-      if (hits.length) return hits;
+      for (const doc of snap.docs) {
+        const p = doc.data() as PostLocale;
+        const hay = normalizeArabicSearchText(`${p.title} ${p.excerpt} ${p.searchText ?? ""}`);
+        const score = scoreMatch(hay, normalized);
+        if (score > 0) {
+          hits.push({
+            id: p.postId,
+            title: p.title,
+            excerpt: p.excerpt,
+            slug: p.slug,
+            locale: p.locale,
+            type: "post",
+            score,
+          });
+        }
+      }
     } catch {
-      /* fall through */
+      const fallback = await listPublishedPosts(locale, { limit: 50 });
+      for (const p of fallback) {
+        const hay = normalizeArabicSearchText(`${p.title} ${p.excerpt} ${p.searchText ?? ""}`);
+        const score = scoreMatch(hay, normalized);
+        if (score > 0) {
+          hits.push({
+            id: p.postId,
+            title: p.title,
+            excerpt: p.excerpt,
+            slug: p.slug,
+            locale: p.locale,
+            type: "post",
+            score,
+          });
+        }
+      }
     }
 
-    const fallback = await listPublishedPosts(locale, { limit: 50 });
-    return fallback
-      .filter((p) => {
-        const hay = normalizeArabicSearchText(`${p.title} ${p.excerpt} ${p.searchText ?? ""}`);
-        return hay.includes(normalized);
-      })
-      .slice(0, limit)
-      .map((p) => ({
-        id: p.postId,
-        title: p.title,
-        excerpt: p.excerpt,
-        slug: p.slug,
-        locale: p.locale,
-        type: "post" as const,
-      }));
+    for (const category of categories) {
+      const hay = normalizeArabicSearchText(`${category.name} ${category.description}`);
+      const score = scoreMatch(hay, normalized);
+      if (score > 0) {
+        hits.push({
+          id: category.slug,
+          title: category.name,
+          excerpt: category.description,
+          slug: category.slug,
+          locale,
+          type: "category",
+          score: score * 0.9,
+        });
+      }
+    }
+
+    for (const tool of tools) {
+      const hay = normalizeArabicSearchText(`${tool.name} ${tool.description} ${tool.category}`);
+      const score = scoreMatch(hay, normalized);
+      if (score > 0) {
+        hits.push({
+          id: tool.slug,
+          title: tool.name,
+          excerpt: tool.description,
+          slug: tool.slug,
+          locale,
+          type: "tool",
+          score: score * 0.85,
+        });
+      }
+    }
+
+    if (locale === "en") {
+      for (const post of seedPosts) {
+        const hay = normalizeArabicSearchText(`${post.title} ${post.excerpt}`);
+        const score = scoreMatch(hay, normalized);
+        if (score > 0 && !hits.some((h) => h.slug === post.slug && h.type === "post")) {
+          hits.push({
+            id: post.slug,
+            title: post.title,
+            excerpt: post.excerpt,
+            slug: post.slug,
+            locale,
+            type: "post",
+            score: score * 0.7,
+          });
+        }
+      }
+    }
+
+    return hits.sort((a, b) => b.score - a.score).slice(0, limit);
+  }
+
+  async suggest(query: string, locale: Locale, options: { limit?: number } = {}): Promise<string[]> {
+    const hits = await this.search(query, locale, { limit: options.limit ?? 8 });
+    return [...new Set(hits.map((hit) => hit.title))].slice(0, options.limit ?? 8);
   }
 }
 

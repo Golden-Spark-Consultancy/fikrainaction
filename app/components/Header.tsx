@@ -7,6 +7,7 @@ import { localizedPath, type Locale } from "../../lib/i18n/config";
 import { createTranslator } from "../../lib/i18n/translate";
 import type { MenuDoc } from "../../lib/types/cms";
 import { LanguageSwitcher } from "./LanguageSwitcher";
+import { ThemeToggle } from "./ThemeToggle";
 
 export function Header({
   locale,
@@ -70,6 +71,7 @@ export function Header({
           <Link href={localizedPath(locale, "/search")}>{t("nav.search")}</Link>
         </nav>
         <div className="nav-actions">
+          <ThemeToggle />
           <LanguageSwitcher locale={locale} />
           <Link
             className="search-button"

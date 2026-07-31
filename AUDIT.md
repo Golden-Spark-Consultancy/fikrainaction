@@ -42,20 +42,28 @@ English affiliate content platform (Next.js 16 + Firebase App Hosting) with:
 
 ## Intentionally deferred / next steps
 
-1. **Deep AdminStudio rewrite** — TipTap is available as `app/components/RichTextEditor.tsx` but the legacy HTML blog textarea remains; wire TipTap + autosave/revisions UI into the studio next.
-2. **Full CMS modules UI** — menus/homepage/comments moderation/users screens need dedicated admin panels beyond API + defaults.
-3. **Playwright e2e + emulator rules suite** — unit/config tests exist; expand with emulator-backed rules tests and browser e2e.
-4. **Production migration** — run `npm run migrate:dry-run` then `npm run migrate` only after Firestore export backup (see MIGRATION.md). Not executed against production from this session.
-5. **App Check enforcement** — document/configure in Console before exposing public write functions widely.
-6. **Legal copy** — starter templates require lawyer review and business/jurisdiction details.
+Completed in follow-up:
+
+1. TipTap bilingual Articles panel with autosave (~20s), statuses, revisions list
+2. CMS dashboard, comments moderation, site config (menus/homepage/settings), redirects + import/export dry-run
+3. Role-aware AdminGate, theme toggle, improved search + suggestions
+4. Playwright smoke specs + expanded unit tests
+
+Still requires your credentials / Console:
+
+1. Production migration with service-account JSON
+2. `firebase:set-role` for owner claim
+3. Deploy Cloud Functions + indexes
+4. App Check enforcement
+5. Legal business details
+6. Optional: `npx playwright install` then `npm run test:e2e` against a running server
 
 ## Verification run locally
 
 ```text
-npm test          → 18 passed
+npm test          → 22 passed
 npm run typecheck → clean
-npm run build:next → success (locale routes + legacy routes)
-functions build   → success
+npm run build:next → success
 ```
 
 ## Required user actions before production cutover

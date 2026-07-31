@@ -373,3 +373,29 @@ code, pre, .code-block, .html-editor { font-family: var(--font-mono), "JetBrains
 @media (prefers-reduced-motion: reduce) {
   .tool-card:hover, .category-card:hover, .directory-card:hover { transform: none; }
 }
+
+/* Rich editor + theme + search polish */
+.rich-editor { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #fff; }
+.rich-editor-toolbar { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px; border-bottom: 1px solid var(--line); background: var(--soft-grey, #f3f6f9); }
+.rich-editor-toolbar button { border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 6px 8px; font-size: 11px; cursor: pointer; }
+.rich-editor-surface { min-height: 280px; padding: 16px; }
+.rich-editor-surface .ProseMirror { min-height: 240px; outline: none; }
+.rich-editor-surface .ProseMirror pre { direction: ltr; text-align: left; }
+.theme-toggle { min-width: 42px; height: 36px; border: 1px solid #26384b; border-radius: 10px; background: transparent; color: #dce7f3; font-size: 11px; font-weight: 700; cursor: pointer; }
+.theme-toggle:hover, .theme-toggle:focus-visible { border-color: var(--accent, #168cff); background: rgba(22,140,255,.12); color: #fff; }
+.search-suggestions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.search-suggestions a { padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: 12px; }
+html[data-theme="dark"], html.dark { color-scheme: dark; }
+html[data-theme="dark"] body, html.dark body { background: #001329; color: #e8eef6; }
+html[data-theme="dark"] .tool-card, html.dark .tool-card,
+html[data-theme="dark"] .post-card, html.dark .post-card,
+html[data-theme="dark"] .category-card, html.dark .category-card,
+html[data-theme="dark"] .rich-editor, html.dark .rich-editor,
+html[data-theme="dark"] .cookie-banner-inner, html.dark .cookie-banner-inner { background: #0b1a2d; border-color: #1e334d; color: #e8eef6; }
+html[data-theme="dark"] .hero-shell, html.dark .hero-shell { background: linear-gradient(180deg, #001329, #0a1c33); }
+html[data-theme="dark"] .section-heading h2, html.dark .section-heading h2,
+html[data-theme="dark"] .hero-copy h1, html.dark .hero-copy h1 { color: #f4f8fc; }
+.comment-form { display: grid; gap: 12px; max-width: 640px; margin-top: 16px; }
+.comment-form input, .comment-form textarea { width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.code-block-figure { margin: 20px 0; }
+.code-block-meta { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 8px; font-size: 12px; }
