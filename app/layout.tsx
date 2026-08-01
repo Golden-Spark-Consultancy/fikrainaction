@@ -43,7 +43,7 @@ export const metadata: Metadata = {
     apple: "/apple-touch-icon.png",
   },
   other: {
-    "impact-site-verification": "ed2e1286-e474-43a4-8d3a-7dcbfed08349",
+    "impact-site-verification": "af365e51-c042-4639-9ac7-6035c152f062",
   },
 };
 
@@ -57,7 +57,7 @@ export default function RootLayout({
         <meta
           name="impact-site-verification"
           // @ts-expect-error Impact verification uses `value` instead of `content`
-          value="ed2e1286-e474-43a4-8d3a-7dcbfed08349"
+          value="af365e51-c042-4639-9ac7-6035c152f062"
         />
       </head>
       <body
