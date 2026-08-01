@@ -384,8 +384,8 @@ export function MediaLibraryPanel({
                       />
                     </span>
                   ) : (
-                    <span className="media-thumb media-thumb-tile">
-                      {asset.kind.toUpperCase()}
+                    <span className="media-thumb media-thumb-tile" aria-label={asset.kind}>
+                      <span className="media-thumb-label">{asset.kind.toUpperCase()}</span>
                     </span>
                   )}
                   <div>

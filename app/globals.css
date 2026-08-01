@@ -535,35 +535,56 @@ a { color: inherit; text-decoration: none; }
 .media-library { max-width: 850px; }.media-dropzone { min-height: 270px; display: grid; place-items: center; align-content: center; gap: 9px; padding: 35px; border: 1px dashed #bdc9c0; border-radius: 13px; background: #fafcf9; text-align: center; cursor: pointer; }.media-dropzone > span { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 13px; background: var(--ink); color: var(--lime); font-size: 20px; }.media-dropzone strong { margin-top: 5px; font-size: 13px; }.media-dropzone small { color: #7d8a83; font-size: 10px; }.media-dropzone input { max-width: 290px; margin-top: 11px; color: #5e6c65; font-size: 10px; }.media-result { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; margin-top: 16px; padding: 14px; border: 1px solid #dce4dd; border-radius: 10px; }.media-result strong, .media-result a { font-size: 10px; }.media-result input { min-width: 0; width: 100%; border: 1px solid #dce3dd; border-radius: 6px; padding: 9px; color: #617069; font-size: 9px; }.media-result a { color: var(--lime-dark); font-weight: 700; }
 .media-upload-button { width: 100%; margin-top: 10px; border: 0; border-radius: 8px; padding: 12px; background: var(--ink); color: white; font-size: 10px; font-weight: 700; cursor: pointer; }.media-upload-button:disabled { opacity: .45; cursor: not-allowed; }
 .media-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
-.media-grid article { overflow: hidden; border: 1px solid #dfe5e0; border-radius: 11px; background: #fafbf9; display: flex; flex-direction: column; }
-/* Locked 16:9 preview frame — image fills without stretching */
+.media-grid article { overflow: hidden; border: 1px solid #dfe5e0; border-radius: 11px; background: #fafbf9; display: flex; flex-direction: column; min-width: 0; }
+/*
+  16:9 preview via padding-bottom (reliable inside flex/grid).
+  Image is contained so the whole photo is visible, not cropped or stretched.
+*/
 .media-thumb {
   position: relative;
   display: block;
   width: 100%;
+  height: 0;
+  padding-bottom: 56.25%; /* 16:9 */
   flex: 0 0 auto;
-  aspect-ratio: 16 / 9;
   overflow: hidden;
-  background: #0b1421;
+  background: #111827;
 }
 .media-thumb img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  object-fit: cover;
-  object-position: center;
-  display: block;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  object-fit: contain !important;
+  object-position: center !important;
+  display: block !important;
 }
-.media-thumb-tile,
 .media-video-tile {
   display: grid;
   place-items: center;
+  width: 100%;
+  height: 0;
+  padding-bottom: 56.25%;
   color: var(--lime);
   font-size: 10px;
   font-weight: 800;
   letter-spacing: .15em;
+  background: #0b1421;
+}
+.media-thumb-label {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--lime);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .12em;
 }
 .media-grid article > div:last-child { display: grid; grid-template-columns: 1fr auto; gap: 5px 10px; align-items: center; padding: 11px; }
 .media-grid strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; }
@@ -1892,8 +1913,8 @@ html[dir="rtl"] .home-banner-shade {
 .media-browser-panel {
   position: relative;
   z-index: 1;
-  width: min(980px, 100%);
-  max-height: min(88vh, 860px);
+  width: min(920px, 100%);
+  max-height: min(90vh, 900px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1943,28 +1964,32 @@ html[dir="rtl"] .home-banner-shade {
   font-size: 16px;
 }
 .media-grid-picker {
-  flex: 1;
-  min-height: 220px;
+  flex: 1 1 auto;
+  min-height: 280px;
   overflow: auto;
-  padding-bottom: 8px;
-  /* Wider tiles so 16:9 previews read clearly */
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 14px;
+  padding: 4px 2px 12px;
+  display: grid;
+  /* Normal gallery: ~3 columns of proper 16:9 cards */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
   align-content: start;
+  align-items: start;
 }
 .media-grid-picker article {
   cursor: pointer;
   transition: box-shadow .15s ease, border-color .15s ease;
   background: #fff;
+  align-self: start;
 }
 .media-grid-picker .media-thumb {
   border-bottom: 1px solid #e8eef4;
+  background: #0f172a;
 }
 .media-grid-picker article > div:last-child {
-  padding: 8px 10px;
+  padding: 10px 12px;
 }
 .media-grid-picker strong {
-  font-size: 11px;
+  font-size: 12px;
 }
 .media-grid-picker small {
   font-size: 10px;
@@ -1975,6 +2000,11 @@ html[dir="rtl"] .home-banner-shade {
 .media-grid-picker article.is-selected {
   box-shadow: 0 0 0 3px rgba(56, 182, 255, 0.55);
   border-color: #5aa8e8;
+}
+@media (max-width: 720px) {
+  .media-grid-picker {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 .media-picker-footer {
   display: flex;
