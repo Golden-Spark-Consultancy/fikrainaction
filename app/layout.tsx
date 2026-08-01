@@ -42,6 +42,9 @@ export const metadata: Metadata = {
     shortcut: "/favicon.png",
     apple: "/apple-touch-icon.png",
   },
+  other: {
+    "impact-site-verification": "ed2e1286-e474-43a4-8d3a-7dcbfed08349",
+  },
 };
 
 export default function RootLayout({
@@ -49,6 +52,14 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ar" dir="rtl" data-locale="ar" suppressHydrationWarning>
+      <head>
+        {/* Impact requires the non-standard `value` attribute (not only `content`). */}
+        <meta
+          name="impact-site-verification"
+          // @ts-expect-error Impact verification uses `value` instead of `content`
+          value="ed2e1286-e474-43a4-8d3a-7dcbfed08349"
+        />
+      </head>
       <body
         className={`${cairo.variable} ${inter.variable} ${jetbrains.variable} ${cairo.className}`}
       >
