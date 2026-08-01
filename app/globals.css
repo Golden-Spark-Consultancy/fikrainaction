@@ -672,6 +672,53 @@ code, pre, .code-block, .html-editor { font-family: var(--font-mono), "JetBrains
 .rich-editor-toolbar select { border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 6px 8px; font-size: 11px; cursor: pointer; }
 .rich-editor-surface { min-height: 280px; padding: 16px; }
 .rich-editor-surface .ProseMirror { min-height: 240px; outline: none; }
+.rich-editor-surface .ProseMirror img.editor-image,
+.rich-editor-surface .ProseMirror img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 12px 0;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.rich-editor-surface .ProseMirror img.ProseMirror-selectednode,
+.rich-editor-surface .ProseMirror-selectednode img {
+  outline: 3px solid #5aa8e8;
+  outline-offset: 2px;
+}
+.editor-image-attrs {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  background: #edf6ff;
+}
+.editor-image-alt-field {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  color: #40566d;
+  font-size: 10px;
+  font-weight: 750;
+}
+.editor-image-alt-field input {
+  width: 100%;
+  border: 1px solid #c9e2f7;
+  border-radius: 8px;
+  padding: 9px 11px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+}
+.editor-image-alt-field input:focus {
+  outline: none;
+  border-color: #5aa8e8;
+  box-shadow: 0 0 0 3px rgba(22, 140, 255, .16);
+}
 .rich-editor-surface .ProseMirror pre { direction: ltr; text-align: left; }
 .rich-editor-surface .ProseMirror ul[data-type="taskList"] { list-style: none; padding-inline-start: 4px; }
 .rich-editor-surface .ProseMirror ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: 8px; }

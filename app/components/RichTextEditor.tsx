@@ -510,6 +510,8 @@ export function RichTextEditor({
   const [aiAlt, setAiAlt] = useState("");
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiError, setAiError] = useState("");
+  const [imageSelected, setImageSelected] = useState(false);
+  const [selectedImageAlt, setSelectedImageAlt] = useState("");
   const insertPosRef = useRef<number | null>(null);
   const resolvedDir: "rtl" | "ltr" = dir || (locale === "ar" ? "rtl" : "ltr");
 
@@ -531,7 +533,13 @@ export function RichTextEditor({
           autolink: true,
           HTMLAttributes: { rel: "noopener noreferrer" },
         }),
-        TiptapImage.configure({ inline: false }),
+        TiptapImage.configure({
+          inline: false,
+          allowBase64: false,
+          HTMLAttributes: {
+            class: "editor-image",
+          },
+        }),
         TaskList,
         TaskItem.configure({ nested: true }),
         Table.configure({ resizable: true }),
@@ -566,6 +574,25 @@ export function RichTextEditor({
     const next = JSON.stringify(initialContent);
     if (current !== next) editor.commands.setContent(initialContent);
   }, [editor, initialContent]);
+
+  useEffect(() => {
+    if (!editor) return;
+    const syncImageSelection = () => {
+      if (editor.isActive("image")) {
+        setImageSelected(true);
+        setSelectedImageAlt(String(editor.getAttributes("image").alt || ""));
+        return;
+      }
+      setImageSelected(false);
+    };
+    syncImageSelection();
+    editor.on("selectionUpdate", syncImageSelection);
+    editor.on("transaction", syncImageSelection);
+    return () => {
+      editor.off("selectionUpdate", syncImageSelection);
+      editor.off("transaction", syncImageSelection);
+    };
+  }, [editor]);
 
   if (!editor) return null;
   const activeEditor = editor;
@@ -639,10 +666,39 @@ export function RichTextEditor({
         onRequestAiImage={openAiImagePrompt}
         aiGenerating={aiGenerating}
       />
+      {imageSelected ? (
+        <div className="editor-image-attrs" role="region" aria-label="Selected image settings">
+          <label className="editor-image-alt-field">
+            <span>Alt text</span>
+            <input
+              type="text"
+              value={selectedImageAlt}
+              placeholder="Describe this image for accessibility and SEO…"
+              onChange={(event) => {
+                const next = event.target.value;
+                setSelectedImageAlt(next);
+                // Keep focus in the input while updating the selected image node.
+                activeEditor.commands.updateAttributes("image", { alt: next });
+              }}
+            />
+          </label>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => {
+              activeEditor.commands.updateAttributes("image", { alt: "" });
+              setSelectedImageAlt("");
+            }}
+          >
+            Clear
+          </button>
+        </div>
+      ) : null}
       <EditorContent editor={activeEditor} className="rich-editor-surface" />
       <div className="rich-editor-footer">
         <span>{characters} characters</span>
         <span>{words} words</span>
+        {imageSelected ? <span>Image selected — edit alt text above</span> : null}
       </div>
 
       {aiPromptOpen ? (
